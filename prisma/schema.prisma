@@ -1,4 +1,4 @@
-// Trading Journal & Dashboard — schema do banco (SQLite local)
+// Trading Journal & Dashboard — schema do banco (Postgres / Supabase)
 // Docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // Instrumento negociado (ex.: MNQ). Usado para calcular US$ a partir de pontos.

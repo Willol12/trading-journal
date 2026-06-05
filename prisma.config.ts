@@ -9,6 +9,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Operações de schema (db push / migrate) usam a conexão DIRETA (porta 5432).
+    // A pooler de transação (6543) não suporta o que essas operações precisam.
+    // O app em runtime usa DATABASE_URL (pooler) via o adapter em src/lib/db.ts.
+    url: process.env["DIRECT_URL"],
   },
 });
