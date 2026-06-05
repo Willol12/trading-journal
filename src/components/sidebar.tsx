@@ -9,9 +9,11 @@ import {
   BookOpen,
   Building2,
   Settings,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtMoney, fmtPct } from "@/lib/format";
+import { signout } from "@/app/login/actions";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -92,6 +94,18 @@ export function Sidebar({ footer }: { footer?: SidebarFooter }) {
           </div>
         </div>
       )}
+
+      <div className="border-t border-border p-2">
+        <form action={signout}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
+        </form>
+      </div>
     </aside>
   );
 }

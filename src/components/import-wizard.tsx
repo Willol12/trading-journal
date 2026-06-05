@@ -6,7 +6,7 @@ import Papa from "papaparse";
 import { Upload, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { importTrades, type ImportRow } from "@/app/trades/importar/actions";
+import { importTrades, type ImportRow } from "@/app/(app)/trades/importar/actions";
 
 const TARGETS: { key: keyof ImportRow; label: string; required?: boolean }[] = [
   { key: "dataHora", label: "Data / Hora" },
