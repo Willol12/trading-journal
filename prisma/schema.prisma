@@ -1,0 +1,118 @@
+// Trading Journal & Dashboard — schema do banco (SQLite local)
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Instrumento negociado (ex.: MNQ). Usado para calcular US$ a partir de pontos.
+model Instrument {
+  id         String   @id @default(cuid())
+  symbol     String   @unique
+  name       String
+  tickSize   Float // ex.: 0.25
+  tickValue  Float // US$ por tick (ex.: 0.50)
+  pointValue Float // US$ por ponto (ex.: 2.00)
+  trades     Trade[]
+  createdAt  DateTime @default(now())
+}
+
+// Conta / mesa (prop firm). Guarda as regras do desafio.
+model Account {
+  id                String         @id @default(cuid())
+  nome              String
+  firm              String? // chave da prop firm (lucid, apex, ...)
+  tamanho           String? // "25k" | "50k" | ...
+  tipo              String         @default("eval") // eval | funded | real | demo
+  saldoInicial      Float          @default(0)
+  moeda             String         @default("USD")
+  metaProfit        Float?
+  limitePerdaDiario Float?
+  maxDrawdown       Float? // trailing/EOD drawdown em US$
+  tipoDrawdown      String         @default("trailing") // trailing | eod | static | intraday
+  consistenciaPct   Float? // % regra de consistência (ex.: 50)
+  minDiasTrade      Int?
+  ativa             Boolean        @default(true)
+  trades            Trade[]
+  journalEntries    JournalEntry[]
+  createdAt         DateTime       @default(now())
+}
+
+// Estratégia / setup (ex.: "Pullback tendência")
+model Setup {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  descricao String?
+  trades    Trade[]
+  createdAt DateTime @default(now())
+}
+
+// Tag de emoção ou erro (ex.: "FOMO", "Moveu o stop")
+model Tag {
+  id     String     @id @default(cuid())
+  nome   String
+  tipo   String // emocao | erro
+  trades TradeTag[]
+
+  @@unique([nome, tipo])
+}
+
+// Operação registrada
+model Trade {
+  id              String     @id @default(cuid())
+  account         Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId       String
+  dataHora        DateTime
+  instrument      Instrument @relation(fields: [instrumentId], references: [id])
+  instrumentId    String
+  direcao         String // long | short
+  contratos       Int        @default(1)
+  precoEntrada    Float?
+  precoStop       Float?
+  precoSaida      Float?
+  resultadoPontos Float?
+  resultadoValor  Float // P&L líquido em US$
+  comissoes       Float      @default(0)
+  riscoValor      Float? // risco em US$ (para R)
+  rrPlanejado     Float?
+  rrRealizado     Float? // R-múltiplo realizado
+  resultado       String // win | loss | be
+  setup           Setup?     @relation(fields: [setupId], references: [id])
+  setupId         String?
+  screenshotPath  String?
+  notas           String?
+  tags            TradeTag[]
+  createdAt       DateTime   @default(now())
+
+  @@index([accountId, dataHora])
+}
+
+// Relação N:N entre Trade e Tag
+model TradeTag {
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId   String
+
+  @@id([tradeId, tagId])
+}
+
+// Diário do dia (plano, review, disciplina)
+model JournalEntry {
+  id              String   @id @default(cuid())
+  data            DateTime
+  account         Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  accountId       String?
+  planoPreMarket  String?
+  reviewPosMarket String?
+  notaDisciplina  Int? // 0–10
+  checklistJson   String? // JSON com itens do checklist
+  createdAt       DateTime @default(now())
+
+  @@unique([data, accountId])
+}

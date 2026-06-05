@@ -1,26 +1,81 @@
 @import "tailwindcss";
 
+@theme {
+  /* Paleta dark-first — shadcn zinc (do design handoff) */
+  --color-bg: #09090b;
+  --color-surface: #131316;
+  --color-surface-2: #1e1e22;
+  --color-border: #26262b;
+  --color-fg: #fafafa;
+  --color-muted: #8b8b94;
+  --color-accent: #3b82f6;
+  --color-accent-fg: #ffffff;
+  --color-profit: #22c55e;
+  --color-loss: #f43f5e;
+  --color-warn: #f59e0b;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius: 14px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-bg);
+  --foreground: var(--color-fg);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html {
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Tema claro (toggle nas Configurações) */
+html.light {
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f1f3;
+  --color-border: #e6e6e9;
+  --color-fg: #18181b;
+  --color-muted: #71717a;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Números tabulares (preços, P&L, R) */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar discreta */
+* {
+  scrollbar-color: var(--color-border) transparent;
+}
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+  border: 3px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
 }
