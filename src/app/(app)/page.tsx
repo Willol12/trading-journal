@@ -152,58 +152,63 @@ export default async function DashboardPage({
         />
       </Stagger>
 
-      {/* Curva + Calendário */}
-      <Stagger className="grid gap-4 lg:grid-cols-3" gap={0.08} startDelay={0.15}>
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-muted" /> Curva de capital
-              </CardTitle>
-              <p className="mt-0.5 text-xs text-muted">
-                {periodTrades.length} trades · DD máx <Money usd={dd} />
-              </p>
-            </div>
-            <span className={`tabular text-sm font-semibold ${tone(summary.netPL) === "profit" ? "text-profit" : tone(summary.netPL) === "loss" ? "text-loss" : "text-muted"}`}>
-              <Money usd={summary.netPL} signed />
-            </span>
-          </CardHeader>
-          <CardContent>
-            <EquityChart data={eq} />
-          </CardContent>
-        </Card>
+      {/* Curva + Últimos trades (esquerda) · Calendário (direita, ocupa a altura) */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <Reveal delay={0.15}>
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-muted" /> Curva de capital
+                  </CardTitle>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {periodTrades.length} trades · DD máx <Money usd={dd} />
+                  </p>
+                </div>
+                <span className={`tabular text-sm font-semibold ${tone(summary.netPL) === "profit" ? "text-profit" : tone(summary.netPL) === "loss" ? "text-loss" : "text-muted"}`}>
+                  <Money usd={summary.netPL} signed />
+                </span>
+              </CardHeader>
+              <CardContent>
+                <EquityChart data={eq} />
+              </CardContent>
+            </Card>
+          </Reveal>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendário</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CalendarHeatmap
-              days={days}
-              year={ref.getFullYear()}
-              month={ref.getMonth()}
-            />
-          </CardContent>
-        </Card>
-      </Stagger>
+          <Reveal delay={0.2}>
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle>Últimos trades</CardTitle>
+                <Link
+                  href={`/trades${sp.conta ? `?conta=${sp.conta}` : ""}`}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Ver todos →
+                </Link>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <TradesTable rows={lastRows} compact />
+              </CardContent>
+            </Card>
+          </Reveal>
+        </div>
 
-      {/* Últimos trades */}
-      <Reveal delay={0.2}>
-        <Card>
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>Últimos trades</CardTitle>
-            <Link
-              href={`/trades${sp.conta ? `?conta=${sp.conta}` : ""}`}
-              className="text-xs text-accent hover:underline"
-            >
-              Ver todos →
-            </Link>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <TradesTable rows={lastRows} compact />
-          </CardContent>
-        </Card>
-      </Reveal>
+        <Reveal delay={0.18}>
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Calendário</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CalendarHeatmap
+                days={days}
+                year={ref.getFullYear()}
+                month={ref.getMonth()}
+              />
+            </CardContent>
+          </Card>
+        </Reveal>
+      </div>
     </div>
   );
 }

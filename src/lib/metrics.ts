@@ -276,7 +276,9 @@ export function rMultipleDistribution(trades: MetricTrade[]): RBucket[] {
   ];
   const counts = buckets.map((b) => ({ label: b.label, count: 0, isNegative: b.isNegative }));
   for (const t of trades) {
-    if (t.rrRealizado == null) continue;
+    // Breakeven / R=0 não é perda nem ganho — não entra na distribuição
+    // (senão R=0 cairia no balde "-1R" e apareceria como perda).
+    if (t.rrRealizado == null || t.rrRealizado === 0 || t.resultado === "be") continue;
     const r = t.rrRealizado;
     const idx = buckets.findIndex((b) => r > b.min && r <= b.max);
     if (idx >= 0) counts[idx].count++;
