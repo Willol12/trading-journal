@@ -2,7 +2,10 @@ import Link from "next/link";
 import { TrendingUp, Percent, BarChart3, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { KpiCard } from "@/components/kpi-card";
+import { StatCard } from "@/components/ui/stat-card";
+import { Reveal, Stagger } from "@/components/ui/reveal";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Celebrate } from "@/components/celebrate";
 import { MesaPanel } from "@/components/mesa-panel";
 import { EquityChart } from "@/components/charts/equity-chart";
 import { CalendarHeatmap } from "@/components/calendar-heatmap";
@@ -23,10 +26,12 @@ import {
   type MetricTrade,
   type Periodo,
 } from "@/lib/metrics";
-import { fmtFactor, fmtPct, plColor } from "@/lib/format";
-import { Money } from "@/components/money";
+import { fmtFactor } from "@/lib/format";
+import { Money, AnimatedMoney } from "@/components/money";
 
 const sumPL = (ts: MetricTrade[]) => ts.reduce((s, t) => s + t.resultadoValor, 0);
+const tone = (n: number): "profit" | "loss" | "neutral" =>
+  n > 0 ? "profit" : n < 0 ? "loss" : "neutral";
 
 export default async function DashboardPage({
   searchParams,
@@ -40,15 +45,19 @@ export default async function DashboardPage({
 
   if (!account) {
     return (
-      <Card className="mx-auto mt-10 max-w-md p-8 text-center">
-        <h2 className="mb-2 text-lg font-semibold text-fg">Bem-vindo 👋</h2>
-        <p className="mb-4 text-sm text-muted">
-          Crie sua primeira conta/mesa para começar a registrar trades.
-        </p>
-        <Button asChild>
-          <Link href="/contas">Criar conta</Link>
-        </Button>
-      </Card>
+      <Reveal className="mx-auto mt-10 max-w-md">
+        <Card className="p-8 text-center">
+          <h2 className="mb-2 font-display text-xl font-semibold text-fg">
+            Bem-vindo 👋
+          </h2>
+          <p className="mb-5 text-sm text-muted">
+            Crie sua primeira conta/mesa para começar a registrar trades.
+          </p>
+          <Button asChild>
+            <Link href="/contas/nova">Criar conta</Link>
+          </Button>
+        </Card>
+      </Reveal>
     );
   }
 
@@ -73,6 +82,7 @@ export default async function DashboardPage({
     },
     allTrades,
   );
+  const metaHit = account.metaProfit != null && mesa.progressoMeta >= 1;
 
   const ref = allTrades.length
     ? allTrades[allTrades.length - 1].dataHora
@@ -81,51 +91,63 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-fg">Bom dia, trader 👋</h1>
+      <Celebrate fire={metaHit} />
+
+      <Reveal>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-fg">
+          Bom dia, trader 👋
+        </h1>
+      </Reveal>
 
       {/* Painel da mesa (hero) */}
-      <MesaPanel nome={account.nome} tipo={account.tipo} status={mesa} />
+      <Reveal delay={0.05}>
+        <MesaPanel nome={account.nome} tipo={account.tipo} status={mesa} />
+      </Reveal>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <KpiCard
+      {/* KPIs — cascata + números contando */}
+      <Stagger
+        className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
+        gap={0.05}
+        startDelay={0.1}
+      >
+        <StatCard
           label="P&L Hoje"
-          value={<Money usd={plHoje} signed />}
-          valueClass={plColor(plHoje)}
+          tone={tone(plHoje)}
+          value={<AnimatedMoney usd={plHoje} signed />}
           sub={`${filterByPeriod(allTrades, "hoje").length} trades`}
         />
-        <KpiCard
+        <StatCard
           label="P&L Semana"
-          value={<Money usd={plSemana} signed />}
-          valueClass={plColor(plSemana)}
+          tone={tone(plSemana)}
+          value={<AnimatedMoney usd={plSemana} signed />}
         />
-        <KpiCard
+        <StatCard
           label="P&L Mês"
-          value={<Money usd={plMes} signed />}
-          valueClass={plColor(plMes)}
+          tone={tone(plMes)}
+          value={<AnimatedMoney usd={plMes} signed />}
         />
-        <KpiCard
+        <StatCard
           label="Win rate"
-          value={fmtPct(summary.winRate)}
           icon={<Percent className="h-4 w-4" />}
+          value={<AnimatedNumber value={summary.winRate} suffix="%" />}
           sub={`${summary.wins}V / ${summary.losses}D`}
         />
-        <KpiCard
+        <StatCard
           label="Profit factor"
-          value={fmtFactor(summary.profitFactor)}
           icon={<BarChart3 className="h-4 w-4" />}
+          value={fmtFactor(summary.profitFactor)}
           sub={`payoff ${fmtFactor(summary.payoff)}`}
         />
-        <KpiCard
+        <StatCard
           label="Drawdown"
-          value={<Money usd={-dd} signed />}
-          valueClass="text-loss"
+          tone="loss"
           icon={<TrendingDown className="h-4 w-4" />}
+          value={<AnimatedMoney usd={-dd} signed />}
         />
-      </div>
+      </Stagger>
 
       {/* Curva + Calendário */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <Stagger className="grid gap-4 lg:grid-cols-3" gap={0.08} startDelay={0.15}>
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between">
             <div>
@@ -136,9 +158,7 @@ export default async function DashboardPage({
                 {periodTrades.length} trades · DD máx <Money usd={dd} />
               </p>
             </div>
-            <span
-              className={`tabular text-sm font-semibold ${plColor(summary.netPL)}`}
-            >
+            <span className={`tabular text-sm font-semibold ${tone(summary.netPL) === "profit" ? "text-profit" : tone(summary.netPL) === "loss" ? "text-loss" : "text-muted"}`}>
               <Money usd={summary.netPL} signed />
             </span>
           </CardHeader>
@@ -151,10 +171,7 @@ export default async function DashboardPage({
           <CardHeader>
             <CardTitle>Calendário</CardTitle>
             <span className="ml-auto text-xs capitalize text-muted">
-              {ref.toLocaleDateString("pt-BR", {
-                month: "long",
-                year: "numeric",
-              })}
+              {ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
             </span>
           </CardHeader>
           <CardContent>
@@ -165,23 +182,25 @@ export default async function DashboardPage({
             />
           </CardContent>
         </Card>
-      </div>
+      </Stagger>
 
       {/* Últimos trades */}
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Últimos trades</CardTitle>
-          <Link
-            href={`/trades${sp.conta ? `?conta=${sp.conta}` : ""}`}
-            className="text-xs text-accent hover:underline"
-          >
-            Ver todos →
-          </Link>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <TradesTable rows={lastRows} compact />
-        </CardContent>
-      </Card>
+      <Reveal delay={0.2}>
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle>Últimos trades</CardTitle>
+            <Link
+              href={`/trades${sp.conta ? `?conta=${sp.conta}` : ""}`}
+              className="text-xs text-accent hover:underline"
+            >
+              Ver todos →
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <TradesTable rows={lastRows} compact />
+          </CardContent>
+        </Card>
+      </Reveal>
     </div>
   );
 }

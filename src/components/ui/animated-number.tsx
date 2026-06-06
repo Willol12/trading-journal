@@ -3,16 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { animate, useReducedMotion } from "motion/react";
 
-// Anima um número "contando" do valor anterior até o novo. GPU-light (sem re-layout).
-// `format` recebe o valor atual (number) e devolve o texto exibido.
+// Anima um número "contando" do valor anterior até o novo. GPU-light.
+// Formata internamente (prefix/suffix/decimals) — assim pode ser usado a partir de
+// Server Components (não recebe função, que não atravessa a fronteira server→client).
 export function AnimatedNumber({
   value,
-  format = (n) => Math.round(n).toString(),
+  decimals = 0,
+  prefix = "",
+  suffix = "",
   duration = 0.9,
   className,
 }: {
   value: number;
-  format?: (n: number) => string;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
   duration?: number;
   className?: string;
 }) {
@@ -35,5 +40,15 @@ export function AnimatedNumber({
     return () => controls.stop();
   }, [value, reduced, duration]);
 
-  return <span className={className}>{format(display)}</span>;
+  const text = display.toLocaleString("pt-BR", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return (
+    <span className={className}>
+      {prefix}
+      {text}
+      {suffix}
+    </span>
+  );
 }
