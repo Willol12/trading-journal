@@ -39,13 +39,15 @@ export function Sidebar({ footer }: { footer?: SidebarFooter }) {
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
-      <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-fg">
-          P
+      <div className="flex items-center gap-2.5 px-4 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-accent to-accent-2 font-display text-base font-bold text-white shadow-[var(--glow-accent)]">
+          T
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-semibold text-fg">Plano</div>
-          <div className="text-xs text-muted">Trading Journal</div>
+          <div className="font-display text-sm font-semibold tracking-tight text-fg">
+            Trading Journal
+          </div>
+          <div className="text-xs text-muted">Diário &amp; performance</div>
         </div>
       </div>
 
@@ -63,7 +65,7 @@ export function Sidebar({ footer }: { footer?: SidebarFooter }) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 active
-                  ? "bg-accent/15 text-accent"
+                  ? "bg-accent/12 text-accent ring-1 ring-inset ring-accent/20"
                   : "text-muted hover:bg-surface-2 hover:text-fg",
               )}
             >

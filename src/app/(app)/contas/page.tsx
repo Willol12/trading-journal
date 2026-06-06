@@ -30,7 +30,7 @@ export default async function ContasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-fg">Contas / Mesas</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Contas / Mesas</h1>
           <p className="text-xs text-muted">
             Regras de cada conta — meta, limite diário e drawdown.
           </p>

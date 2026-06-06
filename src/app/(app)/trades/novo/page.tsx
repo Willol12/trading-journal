@@ -22,7 +22,7 @@ export default async function NovoTradePage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-lg font-semibold text-fg">Novo trade</h1>
+      <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Novo trade</h1>
       <TradeForm
         action={createTrade}
         accounts={accounts.map((a) => ({ id: a.id, nome: a.nome }))}

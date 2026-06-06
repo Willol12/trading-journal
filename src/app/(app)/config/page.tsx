@@ -24,7 +24,7 @@ export default async function ConfigPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-fg">Configurações</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Configurações</h1>
         <p className="text-xs text-muted">Instrumentos, tags, tema e backup.</p>
       </div>
 

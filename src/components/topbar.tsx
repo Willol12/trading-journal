@@ -53,7 +53,7 @@ export function Topbar({ accounts }: { accounts: TopAccount[] }) {
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-border bg-bg/80 px-4 backdrop-blur md:px-6">
-      <div className="min-w-0 truncate text-sm font-medium text-muted">
+      <div className="min-w-0 truncate font-display text-base font-semibold tracking-tight text-fg">
         {title}
       </div>
 

@@ -12,7 +12,7 @@ export default async function ImportarPage({
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-fg">Importar CSV</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Importar CSV</h1>
         <p className="text-xs text-muted">
           Importe o histórico de trades exportado do NinjaTrader 8.
         </p>

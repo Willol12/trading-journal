@@ -73,7 +73,7 @@ export default async function DiarioPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-fg">Diário</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Diário</h1>
         <p className="text-xs text-muted">Plano, review e disciplina — dia a dia.</p>
       </div>
 

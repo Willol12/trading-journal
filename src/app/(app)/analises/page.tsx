@@ -43,7 +43,7 @@ export default async function AnalisesPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-fg">Análises</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Análises</h1>
         <p className="text-xs text-muted">
           O que está funcionando — e o que está custando dinheiro.
         </p>

@@ -17,7 +17,7 @@ export default async function EditContaPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-lg font-semibold text-fg">Editar conta</h1>
+      <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Editar conta</h1>
       <AccountForm
         action={update}
         onDelete={del}

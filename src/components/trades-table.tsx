@@ -33,7 +33,7 @@ export function TradesTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-xs text-muted">
+          <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted">
             <th className="px-3 py-2 font-medium">Data/Hora</th>
             <th className="px-3 py-2 font-medium">Ativo</th>
             <th className="px-3 py-2 font-medium">Direção</th>

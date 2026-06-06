@@ -36,7 +36,7 @@ export default async function EditTradePage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-lg font-semibold text-fg">Editar trade</h1>
+      <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Editar trade</h1>
       <TradeForm
         action={update}
         onDelete={del}

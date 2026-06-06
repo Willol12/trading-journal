@@ -85,7 +85,7 @@ export default async function TradesPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-fg">Trades</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Trades</h1>
           <p className="text-xs text-muted">{rows.length} operações</p>
         </div>
         <div className="flex gap-2">
