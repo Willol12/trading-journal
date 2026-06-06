@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const userId = await getUserId();
   const { searchParams } = new URL(request.url);
   const conta = searchParams.get("conta");
 
   const trades = await prisma.trade.findMany({
-    where: conta ? { accountId: conta } : undefined,
+    where: { userId, ...(conta ? { accountId: conta } : {}) },
     include: { instrument: true, setup: true, account: true },
     orderBy: { dataHora: "asc" },
   });

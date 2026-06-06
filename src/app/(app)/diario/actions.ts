@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 import { CHECKLIST_ITEMS } from "@/lib/journal";
 
 export async function saveJournal(formData: FormData) {
+  const userId = await getUserId();
   const accountId = (formData.get("accountId") as string) || null;
   const dataStr = String(formData.get("data") ?? "");
   if (!dataStr) throw new Error("Data obrigatória.");
@@ -19,7 +21,7 @@ export async function saveJournal(formData: FormData) {
   const checklistJson = JSON.stringify(checklist);
 
   const existing = await prisma.journalEntry.findFirst({
-    where: { data, accountId },
+    where: { userId, data, accountId },
   });
 
   if (existing) {
@@ -30,6 +32,7 @@ export async function saveJournal(formData: FormData) {
   } else {
     await prisma.journalEntry.create({
       data: {
+        userId,
         data,
         accountId,
         planoPreMarket,

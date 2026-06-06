@@ -1,5 +1,9 @@
 // Trading Journal & Dashboard — schema do banco (Postgres / Supabase)
 // Docs: https://pris.ly/d/prisma-schema
+//
+// MULTI-TENANCY: cada modelo de dados tem `userId` (= id do usuário no Supabase Auth,
+// auth.users.id / claim `sub`). Toda query no app filtra por userId (segurança ativa,
+// já que o Prisma conecta como `postgres` e bypassa RLS). RLS é defesa em profundidade.
 
 generator client {
   provider = "prisma-client"
@@ -13,18 +17,23 @@ datasource db {
 // Instrumento negociado (ex.: MNQ). Usado para calcular US$ a partir de pontos.
 model Instrument {
   id         String   @id @default(cuid())
-  symbol     String   @unique
+  userId     String
+  symbol     String
   name       String
   tickSize   Float // ex.: 0.25
   tickValue  Float // US$ por tick (ex.: 0.50)
   pointValue Float // US$ por ponto (ex.: 2.00)
   trades     Trade[]
   createdAt  DateTime @default(now())
+
+  @@unique([userId, symbol])
+  @@index([userId])
 }
 
 // Conta / mesa (prop firm). Guarda as regras do desafio.
 model Account {
   id                String         @id @default(cuid())
+  userId            String
   nome              String
   firm              String? // chave da prop firm (lucid, apex, ...)
   tamanho           String? // "25k" | "50k" | ...
@@ -41,30 +50,39 @@ model Account {
   trades            Trade[]
   journalEntries    JournalEntry[]
   createdAt         DateTime       @default(now())
+
+  @@index([userId])
 }
 
 // Estratégia / setup (ex.: "Pullback tendência")
 model Setup {
   id        String   @id @default(cuid())
-  nome      String   @unique
+  userId    String
+  nome      String
   descricao String?
   trades    Trade[]
   createdAt DateTime @default(now())
+
+  @@unique([userId, nome])
+  @@index([userId])
 }
 
 // Tag de emoção ou erro (ex.: "FOMO", "Moveu o stop")
 model Tag {
   id     String     @id @default(cuid())
+  userId String
   nome   String
   tipo   String // emocao | erro
   trades TradeTag[]
 
-  @@unique([nome, tipo])
+  @@unique([userId, nome, tipo])
+  @@index([userId])
 }
 
 // Operação registrada
 model Trade {
   id              String     @id @default(cuid())
+  userId          String
   account         Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId       String
   dataHora        DateTime
@@ -90,9 +108,10 @@ model Trade {
   createdAt       DateTime   @default(now())
 
   @@index([accountId, dataHora])
+  @@index([userId, dataHora])
 }
 
-// Relação N:N entre Trade e Tag
+// Relação N:N entre Trade e Tag (herda o dono via trade/tag)
 model TradeTag {
   trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
   tradeId String
@@ -105,6 +124,7 @@ model TradeTag {
 // Diário do dia (plano, review, disciplina)
 model JournalEntry {
   id              String   @id @default(cuid())
+  userId          String
   data            DateTime
   account         Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
   accountId       String?
@@ -114,5 +134,6 @@ model JournalEntry {
   checklistJson   String? // JSON com itens do checklist
   createdAt       DateTime @default(now())
 
-  @@unique([data, accountId])
+  @@unique([userId, data, accountId])
+  @@index([userId])
 }

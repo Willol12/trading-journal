@@ -3,72 +3,52 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getTemplate } from "../src/lib/propFirms";
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-});
+// Ferramenta de DEV: popula dados de EXEMPLO para um usuário específico.
+// Multi-tenancy: os dados-padrão (instrumentos/setups/tags) o app cria sozinho
+// quando o usuário loga (ver src/lib/provision.ts). Este script adiciona uma
+// conta demo + trades de exemplo para você visualizar o dashboard preenchido.
+//
+// Uso:  SEED_USER_ID=<id> SEED_SAMPLE=1 npm run seed
+// O id é o auth.users.id (claim sub). Faça login no app pelo menos 1x antes.
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
+
+const userId = process.env.SEED_USER_ID ?? "";
 
 const INSTRUMENTS = [
   { symbol: "MNQ", name: "Micro E-mini Nasdaq-100", tickSize: 0.25, tickValue: 0.5, pointValue: 2.0 },
   { symbol: "MES", name: "Micro E-mini S&P 500", tickSize: 0.25, tickValue: 1.25, pointValue: 5.0 },
 ];
 
-const SETUPS = [
-  { nome: "Pullback tendência", descricao: "Entrada a favor da tendência após recuo." },
-  { nome: "Rompimento", descricao: "Rompimento de range/estrutura." },
-  { nome: "Reversão VWAP", descricao: "Reversão na VWAP." },
-  { nome: "Renko 3-bar", descricao: "Padrão de 3 tijolos Renko." },
-  { nome: "Range fade", descricao: "Operar contra os extremos do range." },
-];
-
-const TAGS: { nome: string; tipo: "emocao" | "erro" }[] = [
-  { nome: "Disciplinado", tipo: "emocao" },
-  { nome: "Confiante", tipo: "emocao" },
-  { nome: "Ansioso", tipo: "emocao" },
-  { nome: "FOMO", tipo: "emocao" },
-  { nome: "Entrada antecipada", tipo: "erro" },
-  { nome: "Moveu o stop", tipo: "erro" },
-  { nome: "Overtrading", tipo: "erro" },
-  { nome: "Sem plano", tipo: "erro" },
-];
-
-const DEMO_ACCOUNT_ID = "demo-lucid-25k";
-
-async function main() {
-  // Instrumentos
+async function ensureDefaults() {
   for (const inst of INSTRUMENTS) {
     await prisma.instrument.upsert({
-      where: { symbol: inst.symbol },
-      update: inst,
-      create: inst,
-    });
-  }
-
-  // Setups
-  for (const s of SETUPS) {
-    await prisma.setup.upsert({
-      where: { nome: s.nome },
-      update: { descricao: s.descricao },
-      create: s,
-    });
-  }
-
-  // Tags
-  for (const t of TAGS) {
-    await prisma.tag.upsert({
-      where: { nome_tipo: { nome: t.nome, tipo: t.tipo } },
+      where: { userId_symbol: { userId, symbol: inst.symbol } },
       update: {},
-      create: t,
+      create: { ...inst, userId },
     });
   }
+}
 
-  // Conta demo (Lucid 25k Eval) a partir do template
+async function main() {
+  if (!userId) {
+    console.error(
+      "Defina SEED_USER_ID com o id do usuário (auth.users.id).\n" +
+        "Faça login no app primeiro — o onboarding cria os defaults automaticamente.",
+    );
+    process.exit(1);
+  }
+
+  await ensureDefaults();
+
   const tpl = getTemplate("lucid", "25k");
-  await prisma.account.upsert({
-    where: { id: DEMO_ACCOUNT_ID },
+  const account = await prisma.account.upsert({
+    where: { id: `demo-${userId}` },
     update: {},
     create: {
-      id: DEMO_ACCOUNT_ID,
+      id: `demo-${userId}`,
+      userId,
       nome: "Lucid 25k Eval",
       firm: "lucid",
       tamanho: "25k",
@@ -76,7 +56,7 @@ async function main() {
       saldoInicial: tpl?.saldoInicial ?? 25000,
       metaProfit: tpl?.metaProfit ?? 1250,
       limitePerdaDiario: tpl?.limitePerdaDiario ?? null,
-      maxDrawdown: tpl?.maxDrawdown ?? 1500,
+      maxDrawdown: tpl?.maxDrawdown ?? 1000,
       tipoDrawdown: tpl?.tipoDrawdown ?? "eod",
       consistenciaPct: tpl?.consistenciaPct ?? 50,
       minDiasTrade: tpl?.minDiasTrade ?? 2,
@@ -84,27 +64,25 @@ async function main() {
     },
   });
 
-  // Dados de exemplo (opcional): SEED_SAMPLE=1
   if (process.env.SEED_SAMPLE === "1") {
-    await seedSampleTrades();
+    await seedSampleTrades(account.id);
   }
 
-  console.log("Seed concluído.");
+  console.log("Seed concluído para o usuário", userId);
 }
 
-async function seedSampleTrades() {
-  const existing = await prisma.trade.count({ where: { accountId: DEMO_ACCOUNT_ID } });
+async function seedSampleTrades(accountId: string) {
+  const existing = await prisma.trade.count({ where: { accountId } });
   if (existing > 0) {
     console.log("Trades de exemplo já existem — pulando.");
     return;
   }
 
-  const mnq = await prisma.instrument.findUnique({ where: { symbol: "MNQ" } });
-  const mes = await prisma.instrument.findUnique({ where: { symbol: "MES" } });
-  const setups = await prisma.setup.findMany();
+  const mnq = await prisma.instrument.findFirst({ where: { userId, symbol: "MNQ" } });
+  const mes = await prisma.instrument.findFirst({ where: { userId, symbol: "MES" } });
+  const setups = await prisma.setup.findMany({ where: { userId } });
   if (!mnq || !mes) return;
 
-  // Gerador determinístico simples
   let seed = 42;
   const rand = () => {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
@@ -112,16 +90,15 @@ async function seedSampleTrades() {
   };
 
   const trades = [];
-  // ~3 semanas de junho/2026, dias úteis, 1-4 trades/dia
   for (let day = 1; day <= 26; day++) {
     const date = new Date(2026, 5, day, 9, 30, 0);
     const dow = date.getDay();
-    if (dow === 0 || dow === 6) continue; // pula fim de semana
+    if (dow === 0 || dow === 6) continue;
     const nTrades = 1 + Math.floor(rand() * 4);
     for (let i = 0; i < nTrades; i++) {
       const inst = rand() > 0.3 ? mnq : mes;
       const contratos = 1 + Math.floor(rand() * 3);
-      const isWin = rand() > 0.36; // ~64% win rate
+      const isWin = rand() > 0.36;
       const direcao = rand() > 0.5 ? "long" : "short";
       const setup = setups[Math.floor(rand() * setups.length)];
       const riscoPontos = 6 + rand() * 6;
@@ -132,7 +109,8 @@ async function seedSampleTrades() {
       const hora = 9 + Math.floor(rand() * 6);
       const minuto = Math.floor(rand() * 60);
       trades.push({
-        accountId: DEMO_ACCOUNT_ID,
+        userId,
+        accountId,
         dataHora: new Date(2026, 5, day, hora, minuto, 0),
         instrumentId: inst.id,
         direcao,

@@ -3,13 +3,18 @@ import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
 import { CurrencyProvider } from "@/components/currency-provider";
 import { getAccounts, getMetricTrades } from "@/lib/data";
+import { getUserId } from "@/lib/auth";
+import { ensureUserProvisioned } from "@/lib/provision";
 import { mesaStatus } from "@/lib/metrics";
 
 // Layout das telas AUTENTICADAS (route group (app)).
-// O middleware já garante que só usuário logado chega aqui.
+// O proxy já garante que só usuário logado chega aqui.
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const userId = await getUserId();
+  // Onboarding: na 1ª visita, cria os dados-padrão do usuário (idempotente).
+  await ensureUserProvisioned(userId);
   const accounts = await getAccounts();
   const ativa = accounts.find((a) => a.ativa) ?? accounts[0];
 

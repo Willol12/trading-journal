@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 import { getAccounts } from "@/lib/data";
 import { plColor } from "@/lib/format";
 import { Money } from "@/components/money";
@@ -11,9 +12,11 @@ import { Money } from "@/components/money";
 export const dynamic = "force-dynamic";
 
 export default async function ContasPage() {
+  const userId = await getUserId();
   const accounts = await getAccounts();
   const sums = await prisma.trade.groupBy({
     by: ["accountId"],
+    where: { userId },
     _sum: { resultadoValor: true },
   });
   const plMap = new Map(

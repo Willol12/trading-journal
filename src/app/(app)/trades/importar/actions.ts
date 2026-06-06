@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 export interface ImportRow {
   dataHora?: string;
@@ -38,6 +39,14 @@ export async function importTrades(payload: {
   const { accountId, rows } = payload;
   if (!accountId) throw new Error("Conta obrigatória.");
 
+  const userId = await getUserId();
+  // Confirma que a conta de destino é do próprio usuário.
+  const account = await prisma.account.findFirst({
+    where: { id: accountId, userId },
+    select: { id: true },
+  });
+  if (!account) throw new Error("Conta inválida.");
+
   // cache de instrumentos e setups
   const instCache = new Map<string, { id: string; pointValue: number }>();
   const setupCache = new Map<string, string>();
@@ -45,10 +54,10 @@ export async function importTrades(payload: {
   async function instrument(symbol: string) {
     const key = symbol.toUpperCase();
     if (instCache.has(key)) return instCache.get(key)!;
-    let inst = await prisma.instrument.findUnique({ where: { symbol: key } });
+    let inst = await prisma.instrument.findFirst({ where: { symbol: key, userId } });
     if (!inst) {
       inst = await prisma.instrument.create({
-        data: { symbol: key, name: key, tickSize: 0.25, tickValue: 0.5, pointValue: 2 },
+        data: { userId, symbol: key, name: key, tickSize: 0.25, tickValue: 0.5, pointValue: 2 },
       });
     }
     const v = { id: inst.id, pointValue: inst.pointValue };
@@ -61,9 +70,9 @@ export async function importTrades(payload: {
     if (!n) return null;
     if (setupCache.has(n)) return setupCache.get(n)!;
     const s = await prisma.setup.upsert({
-      where: { nome: n },
+      where: { userId_nome: { userId, nome: n } },
       update: {},
-      create: { nome: n },
+      create: { userId, nome: n },
     });
     setupCache.set(n, s.id);
     return s.id;
@@ -98,6 +107,7 @@ export async function importTrades(payload: {
 
     await prisma.trade.create({
       data: {
+        userId,
         accountId,
         instrumentId: inst.id,
         dataHora,

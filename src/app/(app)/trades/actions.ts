@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 function num(v: FormDataEntryValue | null): number | null {
   if (v == null || v === "") return null;
@@ -10,7 +11,7 @@ function num(v: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-async function buildData(formData: FormData) {
+async function buildData(formData: FormData, userId: string) {
   const accountId = String(formData.get("accountId") ?? "");
   const instrumentId = String(formData.get("instrumentId") ?? "");
   const direcao = String(formData.get("direcao") ?? "long");
@@ -23,8 +24,9 @@ async function buildData(formData: FormData) {
   const dataHoraRaw = String(formData.get("dataHora") ?? "");
   const dataHora = dataHoraRaw ? new Date(dataHoraRaw) : new Date();
 
-  const instrument = await prisma.instrument.findUnique({
-    where: { id: instrumentId },
+  // Garante que o instrumento é do próprio usuário.
+  const instrument = await prisma.instrument.findFirst({
+    where: { id: instrumentId, userId },
   });
   const pointValue = instrument?.pointValue ?? 1;
 
@@ -90,39 +92,61 @@ async function buildData(formData: FormData) {
   };
 }
 
-async function syncTags(tradeId: string, formData: FormData) {
-  const tagIds = formData.getAll("tagIds").map(String).filter(Boolean);
+async function syncTags(tradeId: string, formData: FormData, userId: string) {
+  // Só aceita tags que pertencem ao usuário.
+  const requested = formData.getAll("tagIds").map(String).filter(Boolean);
+  const owned = requested.length
+    ? await prisma.tag.findMany({
+        where: { id: { in: requested }, userId },
+        select: { id: true },
+      })
+    : [];
   await prisma.tradeTag.deleteMany({ where: { tradeId } });
-  if (tagIds.length) {
+  if (owned.length) {
     await prisma.tradeTag.createMany({
-      data: tagIds.map((tagId) => ({ tradeId, tagId })),
+      data: owned.map((t) => ({ tradeId, tagId: t.id })),
     });
   }
 }
 
 export async function createTrade(formData: FormData) {
-  const data = await buildData(formData);
+  const userId = await getUserId();
+  const data = await buildData(formData, userId);
   if (!data.accountId || !data.instrumentId) {
     throw new Error("Conta e instrumento são obrigatórios.");
   }
-  const trade = await prisma.trade.create({ data });
-  await syncTags(trade.id, formData);
+  // Confirma que a conta é do usuário antes de criar o trade.
+  const account = await prisma.account.findFirst({
+    where: { id: data.accountId, userId },
+    select: { id: true },
+  });
+  if (!account) throw new Error("Conta inválida.");
+
+  const trade = await prisma.trade.create({ data: { ...data, userId } });
+  await syncTags(trade.id, formData, userId);
   revalidatePath("/trades");
   revalidatePath("/");
   redirect(`/trades?conta=${data.accountId}`);
 }
 
 export async function updateTrade(id: string, formData: FormData) {
-  const data = await buildData(formData);
-  await prisma.trade.update({ where: { id }, data });
-  await syncTags(id, formData);
+  const userId = await getUserId();
+  const data = await buildData(formData, userId);
+  // updateMany com userId garante que só atualiza se o trade for do usuário.
+  const { count } = await prisma.trade.updateMany({
+    where: { id, userId },
+    data,
+  });
+  if (count === 0) throw new Error("Trade não encontrado.");
+  await syncTags(id, formData, userId);
   revalidatePath("/trades");
   revalidatePath("/");
   redirect(`/trades?conta=${data.accountId}`);
 }
 
 export async function deleteTrade(id: string, accountId: string) {
-  await prisma.trade.delete({ where: { id } });
+  const userId = await getUserId();
+  await prisma.trade.deleteMany({ where: { id, userId } });
   revalidatePath("/trades");
   revalidatePath("/");
   redirect(`/trades?conta=${accountId}`);

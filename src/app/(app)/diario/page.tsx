@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DisciplineSlider } from "@/components/discipline-slider";
 import { saveJournal } from "./actions";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 import { getAccounts, resolveAccount } from "@/lib/data";
 import { CHECKLIST_ITEMS, parseChecklist } from "@/lib/journal";
 import { fmtMoney, plColor } from "@/lib/format";
@@ -20,6 +21,7 @@ export default async function DiarioPage({
   searchParams: Promise<{ data?: string; conta?: string }>;
 }) {
   const sp = await searchParams;
+  const userId = await getUserId();
   const accounts = await getAccounts();
   const account = resolveAccount(accounts, sp.conta);
   const accountId = account?.id ?? null;
@@ -31,6 +33,7 @@ export default async function DiarioPage({
 
   const monthEntries = await prisma.journalEntry.findMany({
     where: {
+      userId,
       accountId,
       data: { gte: startOfMonth(selDate), lte: endOfMonth(selDate) },
     },
@@ -38,13 +41,14 @@ export default async function DiarioPage({
   const entryDays = new Set(monthEntries.map((e) => ymd(e.data)));
 
   const entry = await prisma.journalEntry.findFirst({
-    where: { accountId, data: new Date(`${sel}T12:00:00`) },
+    where: { userId, accountId, data: new Date(`${sel}T12:00:00`) },
   });
   const checklist = parseChecklist(entry?.checklistJson ?? null);
 
   const dayTrades = accountId
     ? await prisma.trade.aggregate({
         where: {
+          userId,
           accountId,
           dataHora: { gte: startOfDay(selDate), lte: endOfDay(selDate) },
         },

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { TradeForm } from "@/components/trade-form";
 import { updateTrade, deleteTrade } from "../actions";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 import { getAccounts, getInstruments, getSetups, getTags } from "@/lib/data";
 
 function toLocalInput(d: Date) {
@@ -15,8 +16,10 @@ export default async function EditTradePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const trade = await prisma.trade.findUnique({
-    where: { id },
+  const userId = await getUserId();
+  // findFirst com userId: usuário só edita trade que é dele.
+  const trade = await prisma.trade.findFirst({
+    where: { id, userId },
     include: { tags: true },
   });
   if (!trade) notFound();

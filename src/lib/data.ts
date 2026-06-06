@@ -1,14 +1,19 @@
 import { prisma } from "./db";
+import { getUserId } from "./auth";
 import type { MetricTrade } from "./metrics";
 
 export async function getAccounts() {
+  const userId = await getUserId();
   return prisma.account.findMany({
+    where: { userId },
     orderBy: [{ ativa: "desc" }, { createdAt: "asc" }],
   });
 }
 
 export async function getAccount(id: string) {
-  return prisma.account.findUnique({ where: { id } });
+  const userId = await getUserId();
+  // findFirst (não findUnique) para poder exigir o userId — garante que a conta é do usuário.
+  return prisma.account.findFirst({ where: { id, userId } });
 }
 
 export type AccountRow = Awaited<ReturnType<typeof getAccounts>>[number];
@@ -26,8 +31,12 @@ export function resolveAccount(
 }
 
 export async function getMetricTrades(accountId?: string): Promise<MetricTrade[]> {
+  const userId = await getUserId();
   const rows = await prisma.trade.findMany({
-    where: accountId && accountId !== "all" ? { accountId } : undefined,
+    where: {
+      userId,
+      ...(accountId && accountId !== "all" ? { accountId } : {}),
+    },
     include: { setup: true, instrument: true },
     orderBy: { dataHora: "asc" },
   });
@@ -60,8 +69,12 @@ export async function getTradeRows(
   accountId?: string,
   limit?: number,
 ): Promise<TradeRowView[]> {
+  const userId = await getUserId();
   const rows = await prisma.trade.findMany({
-    where: accountId && accountId !== "all" ? { accountId } : undefined,
+    where: {
+      userId,
+      ...(accountId && accountId !== "all" ? { accountId } : {}),
+    },
     include: { setup: true, instrument: true },
     orderBy: { dataHora: "desc" },
     take: limit,
@@ -81,13 +94,25 @@ export async function getTradeRows(
 }
 
 export async function getInstruments() {
-  return prisma.instrument.findMany({ orderBy: { symbol: "asc" } });
+  const userId = await getUserId();
+  return prisma.instrument.findMany({
+    where: { userId },
+    orderBy: { symbol: "asc" },
+  });
 }
 
 export async function getSetups() {
-  return prisma.setup.findMany({ orderBy: { nome: "asc" } });
+  const userId = await getUserId();
+  return prisma.setup.findMany({
+    where: { userId },
+    orderBy: { nome: "asc" },
+  });
 }
 
 export async function getTags() {
-  return prisma.tag.findMany({ orderBy: { nome: "asc" } });
+  const userId = await getUserId();
+  return prisma.tag.findMany({
+    where: { userId },
+    orderBy: { nome: "asc" },
+  });
 }

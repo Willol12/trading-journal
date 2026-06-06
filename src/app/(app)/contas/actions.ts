@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 function num(v: FormDataEntryValue | null): number | null {
   if (v == null || v === "") return null;
@@ -29,9 +30,10 @@ function parse(formData: FormData) {
 }
 
 export async function createAccount(formData: FormData) {
+  const userId = await getUserId();
   const data = parse(formData);
   await prisma.account.create({
-    data: { ...data, minDiasTrade: data.minDiasTrade ?? undefined },
+    data: { ...data, userId, minDiasTrade: data.minDiasTrade ?? undefined },
   });
   revalidatePath("/contas");
   revalidatePath("/");
@@ -39,18 +41,22 @@ export async function createAccount(formData: FormData) {
 }
 
 export async function updateAccount(id: string, formData: FormData) {
+  const userId = await getUserId();
   const data = parse(formData);
-  await prisma.account.update({
-    where: { id },
+  // updateMany com userId garante que só atualiza conta do próprio usuário.
+  const { count } = await prisma.account.updateMany({
+    where: { id, userId },
     data: { ...data, minDiasTrade: data.minDiasTrade ?? null },
   });
+  if (count === 0) throw new Error("Conta não encontrada.");
   revalidatePath("/contas");
   revalidatePath("/");
   redirect("/contas");
 }
 
 export async function deleteAccount(id: string) {
-  await prisma.account.delete({ where: { id } });
+  const userId = await getUserId();
+  await prisma.account.deleteMany({ where: { id, userId } });
   revalidatePath("/contas");
   revalidatePath("/");
   redirect("/contas");
