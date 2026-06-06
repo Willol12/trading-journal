@@ -5,10 +5,11 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent/90",
+  primary:
+    "bg-gradient-to-b from-accent to-[color-mix(in_srgb,var(--color-accent)_80%,var(--color-accent-2))] text-accent-fg shadow-[var(--glow-accent)] hover:brightness-110",
   secondary: "bg-surface-2 text-fg border border-border hover:bg-surface-2/70",
   ghost: "text-muted hover:text-fg hover:bg-surface-2",
-  danger: "bg-loss text-white hover:bg-loss/90",
+  danger: "bg-loss text-white hover:brightness-110",
 };
 
 const sizes: Record<Size, string> = {
@@ -31,7 +32,7 @@ export function Button({
   return (
     <Comp
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
+        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
         variants[variant],
         sizes[size],
         className,

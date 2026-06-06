@@ -1,24 +1,36 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const jbmono = JetBrains_Mono({ variable: "--font-jbmono", subsets: ["latin"] });
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+  display: "swap",
+});
+const jbmono = JetBrains_Mono({
+  variable: "--font-jbmono",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Trading Journal",
   description: "Diário de trades e dashboard de performance",
 };
 
-// Layout RAIZ mínimo: só html/body, fonts e tema.
-// A moldura (sidebar/topbar) fica no grupo (app), pra a tela de /login não herdar.
+// Layout RAIZ mínimo: html/body, fonts, tema e a aura de fundo (atrás de tudo).
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${jbmono.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${hanken.variable} ${jbmono.variable} h-full antialiased`}
     >
       <head>
         <script
@@ -27,7 +39,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full bg-bg text-fg">{children}</body>
+      <body className="min-h-full bg-bg text-fg">
+        <div className="aura" aria-hidden="true" />
+        {children}
+      </body>
     </html>
   );
 }

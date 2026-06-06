@@ -1,43 +1,62 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta dark-first — shadcn zinc (do design handoff) */
-  --color-bg: #09090b;
-  --color-surface: #131316;
-  --color-surface-2: #1e1e22;
-  --color-border: #26262b;
+  /* Paleta dark-first — base zinc com profundidade (Fintech refinado) */
+  --color-bg: #08080a;
+  --color-surface: #121215;
+  --color-surface-2: #1c1c21;
+  --color-border: #26262d;
   --color-fg: #fafafa;
-  --color-muted: #8b8b94;
-  --color-accent: #3b82f6;
+  --color-muted: #8b8b96;
+  --color-accent: #4f7cff;
+  --color-accent-2: #7c5cff;
   --color-accent-fg: #ffffff;
   --color-profit: #22c55e;
   --color-loss: #f43f5e;
   --color-warn: #f59e0b;
 
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  /* Tipografia distintiva (não-genérica): display marcante + corpo limpo + mono p/ números */
+  --font-display: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-hanken), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-jbmono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --radius: 14px;
+  --radius: 16px;
 }
 
 :root {
   --background: var(--color-bg);
   --foreground: var(--color-fg);
+  /* glows (usados em cards de P&L / acentos) */
+  --glow-profit: 0 0 0 1px color-mix(in srgb, var(--color-profit) 22%, transparent),
+    0 8px 30px -8px color-mix(in srgb, var(--color-profit) 35%, transparent);
+  --glow-loss: 0 0 0 1px color-mix(in srgb, var(--color-loss) 22%, transparent),
+    0 8px 30px -8px color-mix(in srgb, var(--color-loss) 35%, transparent);
+  --glow-accent: 0 0 0 1px color-mix(in srgb, var(--color-accent) 25%, transparent),
+    0 10px 40px -10px color-mix(in srgb, var(--color-accent) 45%, transparent);
+  /* elevação refinada */
+  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset,
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 16px 48px -16px rgba(0, 0, 0, 0.7);
 }
 
 html {
   color-scheme: dark;
 }
 
-/* Tema claro (toggle nas Configurações) */
+/* Tema claro (toggle nas Configurações) — secundário */
 html.light {
-  --color-bg: #f7f7f8;
+  --color-bg: #f6f6f8;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f1f3;
-  --color-border: #e6e6e9;
+  --color-surface-2: #f0f0f3;
+  --color-border: #e5e5ea;
   --color-fg: #18181b;
-  --color-muted: #71717a;
+  --color-muted: #6b6b76;
   color-scheme: light;
+}
+html.light {
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px -16px rgba(0, 0, 0, 0.18);
+  --shadow-elevated: 0 16px 48px -20px rgba(0, 0, 0, 0.22);
 }
 
 * {
@@ -52,6 +71,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Display font helper */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
 /* Números tabulares (preços, P&L, R) */
 .tabular {
   font-family: var(--font-mono);
@@ -61,6 +86,82 @@ body {
 
 table {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Profundidade / superfícies ---------- */
+.surface-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 100%, white 2%), var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+.glow-profit {
+  box-shadow: var(--glow-profit);
+}
+.glow-loss {
+  box-shadow: var(--glow-loss);
+}
+
+/* ---------- Aura de fundo (fixa, GPU-light) ---------- */
+.aura {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.aura::before,
+.aura::after {
+  content: "";
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  will-change: transform;
+}
+.aura::before {
+  background: radial-gradient(circle at center, var(--color-accent), transparent 60%);
+  top: -20vmax;
+  left: -10vmax;
+  animation: aura-drift-1 24s ease-in-out infinite alternate;
+}
+.aura::after {
+  background: radial-gradient(circle at center, var(--color-accent-2), transparent 60%);
+  bottom: -25vmax;
+  right: -10vmax;
+  animation: aura-drift-2 30s ease-in-out infinite alternate;
+}
+html.light .aura::before,
+html.light .aura::after {
+  opacity: 0.1;
+}
+
+@keyframes aura-drift-1 {
+  to {
+    transform: translate3d(12vmax, 8vmax, 0) scale(1.15);
+  }
+}
+@keyframes aura-drift-2 {
+  to {
+    transform: translate3d(-10vmax, -6vmax, 0) scale(1.1);
+  }
+}
+
+/* Shimmer (skeletons) */
+.shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-surface-2) 40%,
+    color-mix(in srgb, var(--color-surface-2) 60%, white 12%) 50%,
+    var(--color-surface-2) 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }
 
 /* Scrollbar discreta */
@@ -78,4 +179,15 @@ table {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
+}
+
+/* Acessibilidade / aparelho fraco: desliga movimento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
