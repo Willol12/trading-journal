@@ -1,5 +1,6 @@
 import { TradeForm } from "@/components/trade-form";
 import { createTrade } from "../actions";
+import { getUserId } from "@/lib/auth";
 import {
   getAccounts,
   getInstruments,
@@ -13,6 +14,7 @@ export default async function NovoTradePage({
   searchParams: Promise<{ conta?: string }>;
 }) {
   const sp = await searchParams;
+  const userId = await getUserId();
   const [accounts, instruments, setups, tags] = await Promise.all([
     getAccounts(),
     getInstruments(),
@@ -25,6 +27,7 @@ export default async function NovoTradePage({
       <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Novo trade</h1>
       <TradeForm
         action={createTrade}
+        userId={userId}
         accounts={accounts.map((a) => ({ id: a.id, nome: a.nome }))}
         instruments={instruments.map((i) => ({
           id: i.id,

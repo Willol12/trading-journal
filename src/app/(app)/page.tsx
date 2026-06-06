@@ -28,6 +28,7 @@ import {
 } from "@/lib/metrics";
 import { fmtFactor } from "@/lib/format";
 import { Money, AnimatedMoney } from "@/components/money";
+import { LiveQuotes } from "@/components/live-quotes";
 
 const sumPL = (ts: MetricTrade[]) => ts.reduce((s, t) => s + t.resultadoValor, 0);
 const tone = (n: number): "profit" | "loss" | "neutral" =>
@@ -97,6 +98,11 @@ export default async function DashboardPage({
         <h1 className="font-display text-2xl font-semibold tracking-tight text-fg">
           Bom dia, trader 👋
         </h1>
+      </Reveal>
+
+      {/* Cotações de mercado (atraso) */}
+      <Reveal delay={0.03}>
+        <LiveQuotes />
       </Reveal>
 
       {/* Painel da mesa (hero) */}
@@ -170,9 +176,6 @@ export default async function DashboardPage({
         <Card>
           <CardHeader>
             <CardTitle>Calendário</CardTitle>
-            <span className="ml-auto text-xs capitalize text-muted">
-              {ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-            </span>
           </CardHeader>
           <CardContent>
             <CalendarHeatmap

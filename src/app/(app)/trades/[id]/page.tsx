@@ -3,6 +3,7 @@ import { TradeForm } from "@/components/trade-form";
 import { updateTrade, deleteTrade } from "../actions";
 import { prisma } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
+import { createClient as createSupabaseServer } from "@/lib/supabase/server";
 import { getAccounts, getInstruments, getSetups, getTags } from "@/lib/data";
 
 function toLocalInput(d: Date) {
@@ -24,6 +25,16 @@ export default async function EditTradePage({
   });
   if (!trade) notFound();
 
+  // URL assinada do print (bucket é privado).
+  let screenshotUrl: string | null = null;
+  if (trade.screenshotPath) {
+    const sb = await createSupabaseServer();
+    const { data } = await sb.storage
+      .from("trade-screenshots")
+      .createSignedUrl(trade.screenshotPath, 3600);
+    screenshotUrl = data?.signedUrl ?? null;
+  }
+
   const [accounts, instruments, setups, tags] = await Promise.all([
     getAccounts(),
     getInstruments(),
@@ -41,6 +52,9 @@ export default async function EditTradePage({
         action={update}
         onDelete={del}
         tradeId={id}
+        userId={userId}
+        screenshotInitialPath={trade.screenshotPath}
+        screenshotInitialUrl={screenshotUrl}
         accounts={accounts.map((a) => ({ id: a.id, nome: a.nome }))}
         instruments={instruments.map((i) => ({
           id: i.id,

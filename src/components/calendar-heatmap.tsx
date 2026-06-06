@@ -1,7 +1,15 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { DayPL } from "@/lib/metrics";
 import { Money } from "@/components/money";
 
 const WEEKDAYS = ["S", "T", "Q", "Q", "S", "S", "D"]; // Seg..Dom
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -9,13 +17,23 @@ function pad(n: number) {
 
 export function CalendarHeatmap({
   days,
-  year,
-  month, // 0-based
+  year: initialYear,
+  month: initialMonth, // 0-based
 }: {
   days: DayPL[];
   year: number;
   month: number;
 }) {
+  const [cur, setCur] = useState({ y: initialYear, m: initialMonth });
+  const { y: year, m: month } = cur;
+
+  function shift(delta: number) {
+    setCur((c) => {
+      const d = new Date(c.y, c.m + delta, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
+  }
+
   const byDate = new Map(days.map((d) => [d.date, d]));
   const maxAbs = Math.max(1, ...days.map((d) => Math.abs(d.pl)));
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -34,8 +52,24 @@ export function CalendarHeatmap({
     return {};
   }
 
+  const navBtn =
+    "flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted transition-colors hover:border-accent hover:text-fg";
+
   return (
     <div>
+      {/* Navegação de mês */}
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" aria-label="Mês anterior" onClick={() => shift(-1)} className={navBtn}>
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-medium text-fg">
+          {MESES[month]} {year}
+        </span>
+        <button type="button" aria-label="Próximo mês" onClick={() => shift(1)} className={navBtn}>
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
       <div className="mb-1 grid grid-cols-7 gap-1.5 text-center text-[10px] text-muted">
         {WEEKDAYS.map((w, i) => (
           <div key={i}>{w}</div>

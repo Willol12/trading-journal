@@ -66,10 +66,19 @@ async function buildData(formData: FormData, userId: string) {
   if (resultado === "auto") {
     resultado = resultadoValor > 0 ? "win" : resultadoValor < 0 ? "loss" : "be";
   }
+
+  // Breakeven: você moveu o stop pro zero a zero, então o risco REALIZADO é 0
+  // (mesmo que tenha entrado arriscando US$ X). Zera risco e R.
+  if (resultado === "be") {
+    riscoValor = 0;
+  }
+
   const rrRealizado =
-    riscoValor && riscoValor > 0
-      ? Number((resultadoValor / riscoValor).toFixed(2))
-      : null;
+    resultado === "be"
+      ? 0
+      : riscoValor && riscoValor > 0
+        ? Number((resultadoValor / riscoValor).toFixed(2))
+        : null;
 
   return {
     accountId,
@@ -89,6 +98,7 @@ async function buildData(formData: FormData, userId: string) {
     resultado,
     setupId,
     notas,
+    screenshotPath: (formData.get("screenshotPath") as string) || null,
   };
 }
 

@@ -13,7 +13,7 @@ export function formatMoney(
     compact?: boolean; // símbolo curto e sem espaço (ex.: +$194 / +R$1.046)
   } = {},
 ): string {
-  const { moeda = "USD", rate = 1, signed = false, decimals = 0, compact = false } = opts;
+  const { moeda = "USD", rate = 1, signed = false, decimals = 2, compact = false } = opts;
   const v = moeda === "BRL" ? n * rate : n;
   const sym = moeda === "BRL" ? "R$" : compact ? "$" : "US$";
   const lead = signed ? (v > 0 ? "+" : v < 0 ? "-" : "") : v < 0 ? "-" : "";
@@ -28,7 +28,7 @@ export function fmtMoney(
   n: number,
   opts: { signed?: boolean; decimals?: number } = {},
 ): string {
-  const { signed = false, decimals = 0 } = opts;
+  const { signed = false, decimals = 2 } = opts;
   const sign = n > 0 ? "+" : n < 0 ? "-" : "";
   const abs = Math.abs(n).toLocaleString("pt-BR", {
     minimumFractionDigits: decimals,

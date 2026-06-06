@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { fmtMoney, fmtR, plColor } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DateTimePicker } from "@/components/datetime-picker";
+import { ScreenshotUpload } from "@/components/screenshot-upload";
 
 export interface FormAccount {
   id: string;
@@ -66,6 +68,9 @@ export function TradeForm({
   defaultAccountId,
   tradeId,
   onDelete,
+  userId,
+  screenshotInitialPath,
+  screenshotInitialUrl,
 }: {
   action: (formData: FormData) => void;
   accounts: FormAccount[];
@@ -76,6 +81,9 @@ export function TradeForm({
   defaultAccountId?: string;
   tradeId?: string;
   onDelete?: (formData: FormData) => void;
+  userId: string;
+  screenshotInitialPath?: string | null;
+  screenshotInitialUrl?: string | null;
 }) {
   const [instrumentId, setInstrumentId] = useState(
     initial?.instrumentId ??
@@ -170,12 +178,7 @@ export function TradeForm({
           </div>
           <div>
             <label className={labelCls}>Data / hora</label>
-            <input
-              type="datetime-local"
-              name="dataHora"
-              defaultValue={initial?.dataHora ?? defaultDateTime()}
-              className={inputCls}
-            />
+            <DateTimePicker name="dataHora" initial={initial?.dataHora} />
           </div>
           <div>
             <label className={labelCls}>Direção</label>
@@ -307,6 +310,17 @@ export function TradeForm({
           />
         </div>
 
+        {/* Print do trade (opcional) */}
+        <div>
+          <label className={labelCls}>Print do trade (opcional)</label>
+          <ScreenshotUpload
+            userId={userId}
+            name="screenshotPath"
+            initialPath={screenshotInitialPath}
+            initialUrl={screenshotInitialUrl}
+          />
+        </div>
+
         {/* Opcional: calcular pelos preços */}
         <details className="rounded-lg border border-border bg-surface-2/40 p-3">
           <summary className="cursor-pointer text-xs font-medium text-muted">
@@ -408,10 +422,4 @@ function TagGroup({
       </div>
     </div>
   );
-}
-
-function defaultDateTime() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
