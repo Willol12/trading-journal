@@ -1,9 +1,10 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 // Retorna o id do usuário logado (claim `sub` = auth.users.id no Supabase).
-// As rotas em (app) são protegidas pelo proxy, então aqui sempre deve haver usuário.
-// Se não houver, lançamos — nunca devolver dado sem dono.
-export async function getUserId(): Promise<string> {
+// Envolvido em cache() do React: é chamado em várias funções de dados no mesmo
+// request — assim a validação do token roda só 1x por request.
+export const getUserId = cache(async (): Promise<string> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
@@ -11,4 +12,4 @@ export async function getUserId(): Promise<string> {
     throw new Error("Não autenticado: nenhuma sessão válida.");
   }
   return userId;
-}
+});

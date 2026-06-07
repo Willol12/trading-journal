@@ -109,6 +109,8 @@ model Trade {
 
   @@index([accountId, dataHora])
   @@index([userId, dataHora])
+  @@index([instrumentId])
+  @@index([setupId])
 }
 
 // Relação N:N entre Trade e Tag (herda o dono via trade/tag)
@@ -119,6 +121,7 @@ model TradeTag {
   tagId   String
 
   @@id([tradeId, tagId])
+  @@index([tagId])
 }
 
 // Diário do dia (plano, review, disciplina)
@@ -136,4 +139,5 @@ model JournalEntry {
 
   @@unique([userId, data, accountId])
   @@index([userId])
+  @@index([accountId])
 }
