@@ -1,4 +1,22 @@
+import {
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Scale,
+  Flame,
+  Snowflake,
+  Target,
+  BarChart3,
+  CalendarDays,
+  Clock,
+  Coins,
+  Activity,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
+import { Reveal, Stagger } from "@/components/ui/reveal";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { AnimatedMoney } from "@/components/money";
 import { HBarPL, VBarPL, RDistChart } from "@/components/charts/analytics-charts";
 import { getAccounts, getMetricTrades, resolveAccount } from "@/lib/data";
 import {
@@ -12,9 +30,11 @@ import {
   winLossSequence,
   type Periodo,
 } from "@/lib/metrics";
-import { fmtFactor, fmtPct, plColor } from "@/lib/format";
-import { Money } from "@/components/money";
+import { fmtFactor, fmtPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const tone = (n: number): "profit" | "loss" | "neutral" =>
+  n > 0 ? "profit" : n < 0 ? "loss" : "neutral";
 
 export default async function AnalisesPage({
   searchParams,
@@ -30,41 +50,72 @@ export default async function AnalisesPage({
 
   const summary = computeSummary(trades);
   const seq = winLossSequence(trades);
-
-  const miniCards = [
-    { label: "Resultado líquido", value: <Money usd={summary.netPL} signed />, cls: plColor(summary.netPL) },
-    { label: "Ganho médio", value: <Money usd={summary.avgWin} />, cls: "text-profit" },
-    { label: "Perda média", value: <Money usd={-summary.avgLoss} signed />, cls: "text-loss" },
-    { label: "Payoff", value: fmtFactor(summary.payoff), cls: "text-fg" },
-    { label: "Maior seq. ganhos", value: `${summary.maxWinStreak}×`, cls: "text-profit" },
-    { label: "Maior seq. perdas", value: `${summary.maxLossStreak}×`, cls: "text-loss" },
-  ];
+  const recentSeq = seq.slice(-80);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Análises</h1>
-        <p className="text-xs text-muted">
-          O que está funcionando — e o que está custando dinheiro.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <Reveal>
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-fg">
+            Análises
+          </h1>
+          <p className="mt-0.5 text-xs text-muted">
+            O que está funcionando — e o que está custando dinheiro.
+          </p>
+        </div>
+      </Reveal>
 
-      {/* Mini cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {miniCards.map((c) => (
-          <Card key={c.label} className="p-4">
-            <div className="text-xs text-muted">{c.label}</div>
-            <div className={cn("tabular text-lg font-semibold", c.cls)}>
-              {c.value}
-            </div>
-          </Card>
-        ))}
-      </div>
+      {/* KPIs */}
+      <Stagger
+        className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
+        gap={0.05}
+        startDelay={0.05}
+      >
+        <StatCard
+          label="Resultado líquido"
+          tone={tone(summary.netPL)}
+          icon={<Wallet className="h-4 w-4" />}
+          value={<AnimatedMoney usd={summary.netPL} signed />}
+        />
+        <StatCard
+          label="Ganho médio"
+          tone="profit"
+          icon={<ArrowUpRight className="h-4 w-4" />}
+          value={<AnimatedMoney usd={summary.avgWin} />}
+        />
+        <StatCard
+          label="Perda média"
+          tone="loss"
+          icon={<ArrowDownRight className="h-4 w-4" />}
+          value={<AnimatedMoney usd={-summary.avgLoss} signed />}
+        />
+        <StatCard
+          label="Payoff"
+          icon={<Scale className="h-4 w-4" />}
+          value={fmtFactor(summary.payoff)}
+          sub="ganho ÷ perda média"
+        />
+        <StatCard
+          label="Maior seq. ganhos"
+          tone="profit"
+          icon={<Flame className="h-4 w-4" />}
+          value={<AnimatedNumber value={summary.maxWinStreak} suffix="×" />}
+        />
+        <StatCard
+          label="Maior seq. perdas"
+          tone="loss"
+          icon={<Snowflake className="h-4 w-4" />}
+          value={<AnimatedNumber value={summary.maxLossStreak} suffix="×" />}
+        />
+      </Stagger>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Gráficos */}
+      <Stagger className="grid gap-4 lg:grid-cols-2" gap={0.07} startDelay={0.12}>
         <Card>
           <CardHeader>
-            <CardTitle>P&L por setup</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <Target className="h-4 w-4 text-muted" /> P&amp;L por setup
+            </CardTitle>
             <span className="ml-auto text-xs text-muted">Onde está seu edge</span>
           </CardHeader>
           <CardContent>
@@ -74,7 +125,9 @@ export default async function AnalisesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição de R-múltiplos</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <BarChart3 className="h-4 w-4 text-muted" /> Distribuição de R-múltiplos
+            </CardTitle>
             <span className="ml-auto text-xs text-muted">Forma da expectância</span>
           </CardHeader>
           <CardContent>
@@ -84,7 +137,9 @@ export default async function AnalisesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>P&L por dia da semana</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <CalendarDays className="h-4 w-4 text-muted" /> P&amp;L por dia da semana
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <VBarPL data={plByDayOfWeek(trades)} />
@@ -93,7 +148,9 @@ export default async function AnalisesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>P&L por horário</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-muted" /> P&amp;L por horário
+            </CardTitle>
             <span className="ml-auto text-xs text-muted">Hora de abertura</span>
           </CardHeader>
           <CardContent>
@@ -103,7 +160,9 @@ export default async function AnalisesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>P&L por ativo</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <Coins className="h-4 w-4 text-muted" /> P&amp;L por ativo
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <HBarPL data={plByInstrument(trades)} />
@@ -112,33 +171,44 @@ export default async function AnalisesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Sequências win / loss</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              <Activity className="h-4 w-4 text-muted" /> Sequências win / loss
+            </CardTitle>
             <span className="ml-auto text-xs text-muted">
               {summary.wins}V · {summary.losses}D · {fmtPct(summary.winRate)}
             </span>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-1">
-              {seq.map((r, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-3.5 w-3.5 rounded-sm",
-                    r === "win"
-                      ? "bg-profit"
-                      : r === "loss"
-                        ? "bg-loss"
-                        : "bg-muted",
-                  )}
-                />
-              ))}
-              {seq.length === 0 && (
-                <span className="text-sm text-muted">Sem trades no período.</span>
-              )}
-            </div>
+            {recentSeq.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {recentSeq.map((r, i) => (
+                  <span
+                    key={i}
+                    title={r === "win" ? "Ganho" : r === "loss" ? "Perda" : "Breakeven"}
+                    className={cn(
+                      "h-4 w-4 rounded-[4px] ring-1 ring-inset ring-black/20 transition-transform hover:scale-110",
+                      r === "win"
+                        ? "bg-profit shadow-[0_0_8px_-2px_var(--color-profit)]"
+                        : r === "loss"
+                          ? "bg-loss shadow-[0_0_8px_-2px_var(--color-loss)]"
+                          : "bg-muted/50",
+                    )}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm text-muted">
+                Sem trades no período.
+              </div>
+            )}
+            {seq.length > recentSeq.length && (
+              <p className="mt-2 text-[11px] text-muted">
+                mostrando os últimos {recentSeq.length} de {seq.length}
+              </p>
+            )}
           </CardContent>
         </Card>
-      </div>
+      </Stagger>
     </div>
   );
 }
