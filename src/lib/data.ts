@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "./db";
 import { getUserId } from "./auth";
-import type { MetricTrade } from "./metrics";
+import type { MetricTrade, TaggedTrade } from "./metrics";
 
 // Todas as leituras são envolvidas em cache() do React: o layout e a página
 // chamam as mesmas funções no mesmo request — cache() deduplica (1 query, não 2).
@@ -94,6 +94,27 @@ export const getTradeRows = cache(
       rrRealizado: r.rrRealizado,
       resultadoPontos: r.resultadoPontos,
       resultadoValor: r.resultadoValor,
+    }));
+  },
+);
+
+// Trades com suas tags, para a aba Tendências.
+export const getTaggedTrades = cache(
+  async (accountId?: string): Promise<TaggedTrade[]> => {
+    const userId = await getUserId();
+    const rows = await prisma.trade.findMany({
+      where: {
+        userId,
+        ...(accountId && accountId !== "all" ? { accountId } : {}),
+      },
+      include: { tags: { include: { tag: true } } },
+      orderBy: { dataHora: "asc" },
+    });
+    return rows.map((r) => ({
+      resultadoValor: r.resultadoValor,
+      resultado: r.resultado,
+      rrRealizado: r.rrRealizado,
+      tags: r.tags.map((tt) => ({ nome: tt.tag.nome, tipo: tt.tag.tipo })),
     }));
   },
 );

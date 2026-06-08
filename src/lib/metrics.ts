@@ -298,6 +298,60 @@ export function winLossSequence(trades: MetricTrade[]): ("win" | "loss" | "be")[
     );
 }
 
+// ---- Tendências (agregação por tag de erro/emoção) ----
+// Forma mínima de trade com tags, usada na aba Tendências.
+export interface TaggedTrade {
+  resultadoValor: number;
+  resultado: string; // win | loss | be
+  rrRealizado: number | null;
+  tags: { nome: string; tipo: string }[];
+}
+
+export interface TendencyStat {
+  nome: string;
+  tipo: string; // erro | emocao
+  count: number;
+  netPL: number;
+  winRate: number;
+  avgR: number;
+}
+
+// Agrupa os trades por tag (um trade com N tags conta em cada uma) e devolve,
+// por tag, quantas vezes apareceu, o P&L somado, win rate e R médio.
+// Ordenado do mais custoso (menor P&L) para o mais lucrativo — os traps primeiro.
+export function tendencyStats(trades: TaggedTrade[]): TendencyStat[] {
+  const map = new Map<
+    string,
+    { nome: string; tipo: string; count: number; pl: number; wins: number; rSum: number; rCount: number }
+  >();
+  for (const t of trades) {
+    for (const tag of t.tags) {
+      const key = `${tag.tipo}::${tag.nome}`;
+      const cur =
+        map.get(key) ??
+        { nome: tag.nome, tipo: tag.tipo, count: 0, pl: 0, wins: 0, rSum: 0, rCount: 0 };
+      cur.count += 1;
+      cur.pl += t.resultadoValor;
+      if (t.resultado === "win" || (t.resultado !== "loss" && t.resultadoValor > 0)) cur.wins += 1;
+      if (t.rrRealizado != null) {
+        cur.rSum += t.rrRealizado;
+        cur.rCount += 1;
+      }
+      map.set(key, cur);
+    }
+  }
+  return [...map.values()]
+    .map((v) => ({
+      nome: v.nome,
+      tipo: v.tipo,
+      count: v.count,
+      netPL: Number(v.pl.toFixed(2)),
+      winRate: v.count ? Number(((v.wins / v.count) * 100).toFixed(1)) : 0,
+      avgR: v.rCount ? Number((v.rSum / v.rCount).toFixed(2)) : 0,
+    }))
+    .sort((a, b) => a.netPL - b.netPL);
+}
+
 // ---- Status da mesa / prop firm ----
 export interface MesaInput {
   saldoInicial: number;
