@@ -42,7 +42,7 @@ export default async function AnalisesPage({
   searchParams: Promise<{ periodo?: string; conta?: string }>;
 }) {
   const sp = await searchParams;
-  const periodo = (sp.periodo as Periodo) ?? "tudo";
+  const periodo = (sp.periodo as Periodo) ?? "mes";
   const accounts = await getAccounts();
   const account = resolveAccount(accounts, sp.conta);
   const all = account ? await getMetricTrades(account.id) : [];

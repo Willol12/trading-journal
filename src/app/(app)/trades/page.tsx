@@ -50,7 +50,7 @@ export default async function TradesPage({
   }>;
 }) {
   const sp = await searchParams;
-  const periodo = (sp.periodo as Periodo) ?? "tudo";
+  const periodo = (sp.periodo as Periodo) ?? "mes";
   const accounts = await getAccounts();
   const account = resolveAccount(accounts, sp.conta);
 
