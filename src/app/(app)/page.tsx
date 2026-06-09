@@ -142,7 +142,11 @@ export default async function DashboardPage({
           label="Profit factor"
           icon={<BarChart3 className="h-4 w-4" />}
           value={fmtFactor(summary.profitFactor)}
-          sub={`expect. ${fmtMoney(summary.expectancy, { signed: true })}`}
+          sub={
+            summary.payoff !== null
+              ? `payoff ${fmtFactor(summary.payoff)}`
+              : `expect. ${fmtMoney(summary.expectancy, { signed: true })}`
+          }
         />
         <StatCard
           label="Drawdown"
