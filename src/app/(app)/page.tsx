@@ -26,7 +26,7 @@ import {
   type MetricTrade,
   type Periodo,
 } from "@/lib/metrics";
-import { fmtFactor } from "@/lib/format";
+import { fmtFactor, fmtMoney } from "@/lib/format";
 import { Money, AnimatedMoney } from "@/components/money";
 import { LiveQuotes } from "@/components/live-quotes";
 
@@ -142,7 +142,7 @@ export default async function DashboardPage({
           label="Profit factor"
           icon={<BarChart3 className="h-4 w-4" />}
           value={fmtFactor(summary.profitFactor)}
-          sub={`payoff ${fmtFactor(summary.payoff)}`}
+          sub={`expect. ${fmtMoney(summary.expectancy, { signed: true })}`}
         />
         <StatCard
           label="Drawdown"
