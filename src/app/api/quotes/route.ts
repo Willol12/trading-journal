@@ -36,16 +36,16 @@ interface YahooMeta {
 
 const SYMBOLS: { key: string; label: string; yahoo: string; fallback?: string }[] = [
   // Índices de equity
-  { key: "NQ",  label: "NQ (Nasdaq)",     yahoo: "NQ=F" },
-  { key: "ES",  label: "ES (S&P 500)",    yahoo: "ES=F" },
-  { key: "RTY", label: "RTY (Russell)",   yahoo: "RTY=F" },
+  { key: "NQ",  label: "Nasdaq 100",         yahoo: "NQ=F" },
+  { key: "ES",  label: "S&P 500",            yahoo: "ES=F" },
+  { key: "RTY", label: "Russell 2000",       yahoo: "RTY=F" },
   // Commodities
-  { key: "GC",  label: "GC (Ouro)",       yahoo: "GC=F" },
-  { key: "CL",  label: "CL (Petróleo)",   yahoo: "CL=F" },
+  { key: "GC",  label: "Ouro",               yahoo: "GC=F" },
+  { key: "CL",  label: "Petróleo WTI",       yahoo: "CL=F" },
   // Macro
-  { key: "DXY", label: "DXY (Dólar)",     yahoo: "DX-Y.NYB", fallback: "DX=F" },
-  { key: "ZN",  label: "ZN (T-Note 10Y)", yahoo: "ZN=F" },
-  { key: "VIX", label: "VIX (Vol)",       yahoo: "^VIX" },
+  { key: "DXY", label: "Dólar Index",        yahoo: "DX-Y.NYB", fallback: "DX=F" },
+  { key: "ZN",  label: "Treasury 10 Anos",   yahoo: "ZN=F" },
+  { key: "VIX", label: "Volatilidade",       yahoo: "^VIX" },
 ];
 
 async function fetchQuote(yahoo: string): Promise<{ price: number; changePct: number } | null> {

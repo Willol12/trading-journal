@@ -59,9 +59,12 @@ function QuoteCard({ quote, animate }: { quote: QuoteItem; animate: boolean }) {
         animate && "hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]",
       )}
     >
-      {/* Símbolo */}
+      {/* Símbolo + nome */}
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
         {quote.key}
+      </span>
+      <span className="text-[11px] font-medium leading-tight text-fg">
+        {quote.label}
       </span>
 
       {/* Preço */}
