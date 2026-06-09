@@ -1,7 +1,12 @@
 // Cotações de mercado com atraso (Yahoo Finance, sem chave de API).
-// Busca NQ, ES, GC, CL e DXY em paralelo; falhas individuais são omitidas
+// Busca todos os símbolos em paralelo; falhas individuais são omitidas
 // silenciosamente — nunca derruba a rota inteira.
+//
+// Cache server-side de 55s: independente de quantos usuários estão logados,
+// o Yahoo recebe no máximo 1 batch de requests por minuto.
 export const dynamic = "force-dynamic";
+
+const CACHE_TTL = 55_000; // ms — ligeiramente abaixo do polling do cliente (60s)
 
 // Yahoo bloqueia User-Agent não-browser (429). Usar UA de navegador.
 const UA =
@@ -14,19 +19,33 @@ export interface QuoteItem {
   changePct: number;
 }
 
+interface CacheEntry {
+  quotes: QuoteItem[];
+  atualizadoEm: string;
+  ts: number;
+}
+
+// Cache in-memory: warm instances reusam, cold starts rebatem no Yahoo uma vez.
+let _cache: CacheEntry | null = null;
+
 interface YahooMeta {
   regularMarketPrice?: number;
   chartPreviousClose?: number;
   previousClose?: number;
 }
 
-// Símbolos Yahoo Finance para cada mercado
 const SYMBOLS: { key: string; label: string; yahoo: string; fallback?: string }[] = [
-  { key: "NQ", label: "NQ (Nasdaq)", yahoo: "NQ=F" },
-  { key: "ES", label: "ES (S&P 500)", yahoo: "ES=F" },
-  { key: "GC", label: "GC (Ouro)", yahoo: "GC=F" },
-  { key: "CL", label: "CL (Petróleo)", yahoo: "CL=F" },
-  { key: "DXY", label: "DXY (Dólar)", yahoo: "DX-Y.NYB", fallback: "DX=F" },
+  // Índices de equity
+  { key: "NQ",  label: "NQ (Nasdaq)",     yahoo: "NQ=F" },
+  { key: "ES",  label: "ES (S&P 500)",    yahoo: "ES=F" },
+  { key: "RTY", label: "RTY (Russell)",   yahoo: "RTY=F" },
+  // Commodities
+  { key: "GC",  label: "GC (Ouro)",       yahoo: "GC=F" },
+  { key: "CL",  label: "CL (Petróleo)",   yahoo: "CL=F" },
+  // Macro
+  { key: "DXY", label: "DXY (Dólar)",     yahoo: "DX-Y.NYB", fallback: "DX=F" },
+  { key: "ZN",  label: "ZN (T-Note 10Y)", yahoo: "ZN=F" },
+  { key: "VIX", label: "VIX (Vol)",       yahoo: "^VIX" },
 ];
 
 async function fetchQuote(yahoo: string): Promise<{ price: number; changePct: number } | null> {
@@ -53,20 +72,17 @@ async function fetchQuote(yahoo: string): Promise<{ price: number; changePct: nu
 }
 
 export async function GET() {
+  // Serve do cache se ainda estiver fresco
+  if (_cache && Date.now() - _cache.ts < CACHE_TTL) {
+    return Response.json({ quotes: _cache.quotes, atualizadoEm: _cache.atualizadoEm });
+  }
+
   const results = await Promise.allSettled(
     SYMBOLS.map(async (s) => {
       let data = await fetchQuote(s.yahoo);
-      // Tenta fallback se o símbolo principal falhou
-      if (data == null && s.fallback) {
-        data = await fetchQuote(s.fallback);
-      }
+      if (data == null && s.fallback) data = await fetchQuote(s.fallback);
       if (data == null) return null;
-      return {
-        key: s.key,
-        label: s.label,
-        price: data.price,
-        changePct: data.changePct,
-      } satisfies QuoteItem;
+      return { key: s.key, label: s.label, price: data.price, changePct: data.changePct } satisfies QuoteItem;
     }),
   );
 
@@ -74,8 +90,8 @@ export async function GET() {
     .map((r) => (r.status === "fulfilled" ? r.value : null))
     .filter((q): q is QuoteItem => q != null);
 
-  return Response.json({
-    quotes,
-    atualizadoEm: new Date().toISOString(),
-  });
+  const atualizadoEm = new Date().toISOString();
+  _cache = { quotes, atualizadoEm, ts: Date.now() };
+
+  return Response.json({ quotes, atualizadoEm });
 }
