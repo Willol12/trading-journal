@@ -43,6 +43,7 @@ export function Simulador({ journal }: { journal: JournalData }) {
   );
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SimResult | null>(null);
+  const [baseline, setBaseline] = useState<SimResult | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const rules = mesaToRules(mesa);
@@ -63,7 +64,14 @@ export function Simulador({ journal }: { journal: JournalData }) {
     // setTimeout garante o repaint do botão antes do cálculo síncrono
     setTimeout(() => {
       try {
-        setResult(simulate(r, tm, paramsToSimParams(params)));
+        const sp = paramsToSimParams(params); // mesma seed pros dois cenários
+        setResult(simulate(r, tm, sp));
+        // com tilt ligado, roda o "você disciplinado" pra mostrar o preço do tilt
+        setBaseline(
+          tm.kind === "parametric" && tm.psyche
+            ? simulate(r, { ...tm, psyche: null }, sp)
+            : null,
+        );
       } finally {
         setRunning(false);
       }
@@ -194,6 +202,48 @@ export function Simulador({ journal }: { journal: JournalData }) {
               />
             )}
           </div>
+
+          {result.tiltStats && baseline && (
+            <Card>
+              <CardHeader>
+                <CardTitle>O preço do tilt</CardTitle>
+                <span className="ml-auto text-xs text-muted">
+                  mesma seed: você disciplinado × você em tilt
+                </span>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <StatCard
+                    label="Aprovação disciplinado"
+                    tone="profit"
+                    value={fmtPct(baseline.passProb * 100, 1)}
+                  />
+                  <StatCard
+                    label="Aprovação com tilt"
+                    tone={result.passProb < baseline.passProb ? "loss" : "neutral"}
+                    value={fmtPct(result.passProb * 100, 1)}
+                    sub={`${fmtNumber((result.passProb - baseline.passProb) * 100, 1)} pontos`}
+                  />
+                  <StatCard
+                    label="Runs que entraram em tilt"
+                    tone="accent"
+                    value={fmtPct(result.tiltStats.runsComTilt * 100, 0)}
+                  />
+                  <StatCard
+                    label="P&L médio em tilt"
+                    tone={result.tiltStats.plTiltMedio < 0 ? "loss" : "profit"}
+                    value={<Money usd={result.tiltStats.plTiltMedio} signed />}
+                    sub="por tentativa que tiltou"
+                  />
+                </div>
+                <p className="mt-3 text-[11px] text-muted">
+                  O delta entre as duas aprovações é o que a indisciplina custa —
+                  e o que regras tipo &quot;parei após N perdas&quot; compram de
+                  volta (teste ligando o disjuntor).
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="lg:col-span-2">

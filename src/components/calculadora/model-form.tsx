@@ -1,6 +1,12 @@
 "use client";
 
-import { ATM_PRESETS, MNQ, type TradeModel } from "@/lib/simulator";
+import {
+  ATM_PRESETS,
+  MNQ,
+  PSYCHE_PROFILES,
+  type PsycheProfileKey,
+  type TradeModel,
+} from "@/lib/simulator";
 import { fmtMoney, fmtNumber, fmtPct } from "@/lib/format";
 import type { JournalData } from "./types";
 import { Field, NumInput, Toggle, inputCls, num } from "./fields";
@@ -22,6 +28,12 @@ export interface ModelFormState {
   bayesLosses: string;
   blockOn: boolean;
   scale: string;
+  // fator psicológico (campos novos são opcionais p/ não quebrar
+  // estado antigo salvo no localStorage)
+  psycheOn?: boolean;
+  psycheProfile?: string;
+  breakerOn?: boolean;
+  breakerLosses?: string;
 }
 
 export function modelDefault(atmKey = "1x3", winRate = "40"): ModelFormState {
@@ -43,7 +55,24 @@ export function modelDefault(atmKey = "1x3", winRate = "40"): ModelFormState {
     bayesLosses: "0",
     blockOn: false,
     scale: "1",
+    psycheOn: false,
+    psycheProfile: "medio",
+    breakerOn: false,
+    breakerLosses: "2",
   };
+}
+
+const PERFIL_DESCRICAO: Record<PsycheProfileKey, string> = {
+  estavel:
+    "Estável: tilt só após 4 perdas seguidas — mão +25%, acerto −5pp, 5% de chance de segurar a perda; recupera com 1 win.",
+  medio:
+    "Médio: tilt após 3 perdas — mão +50%, acerto −10pp, +1 trade de revenge no dia, 10% de chance de segurar a perda; recupera com 2 wins.",
+  instavel:
+    "Instável: tilt após 2 perdas — mão 2×, acerto −15pp, +2 trades de revenge, 20% de chance de segurar a perda (2,5×); precisa de 3 wins pra recuperar.",
+};
+
+function psycheKey(v: string | undefined): PsycheProfileKey {
+  return v === "estavel" || v === "instavel" ? v : "medio";
 }
 
 export const MIN_BOOTSTRAP = 20;
@@ -86,6 +115,14 @@ export function modelToTradeModel(
       m.bayesOn && wins + losses > 0
         ? { wins, losses, priorAlpha: 1, priorBeta: 1 }
         : null,
+    psyche: m.psycheOn
+      ? {
+          ...PSYCHE_PROFILES[psycheKey(m.psycheProfile)],
+          breaker: m.breakerOn
+            ? { maxLossesDia: Math.max(1, Math.floor(num(m.breakerLosses ?? "2", 2))) }
+            : null,
+        }
+      : null,
   };
 }
 
@@ -254,6 +291,52 @@ export function ModelForm({
               Com amostra pequena, seu win rate verdadeiro é incerto — cada run
               sorteia um WR plausível dado o que você já mediu (o % digitado
               acima é ignorado).
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Toggle
+              checked={value.psycheOn ?? false}
+              onChange={(v) => set({ psycheOn: v })}
+              label="Fator psicológico (tilt)"
+            />
+            {value.psycheOn && (
+              <>
+                <select
+                  value={psycheKey(value.psycheProfile)}
+                  onChange={(e) => set({ psycheProfile: e.target.value })}
+                  aria-label="Perfil psicológico"
+                  className={`${inputCls} h-8 w-auto text-xs`}
+                >
+                  <option value="estavel">Estável</option>
+                  <option value="medio">Médio</option>
+                  <option value="instavel">Instável</option>
+                </select>
+                <Toggle
+                  checked={value.breakerOn ?? false}
+                  onChange={(v) => set({ breakerOn: v })}
+                  label="Disjuntor: parar o dia após"
+                />
+                {value.breakerOn && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted">
+                    <span className="w-14">
+                      <NumInput
+                        value={value.breakerLosses ?? "2"}
+                        onChange={(v) => set({ breakerLosses: v })}
+                      />
+                    </span>
+                    perdas
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+          {value.psycheOn && (
+            <p className="text-xs text-muted">
+              {PERFIL_DESCRICAO[psycheKey(value.psycheProfile)]}{" "}
+              {value.breakerOn
+                ? "Com o disjuntor, ao bater as perdas do dia você para, esfria e volta disciplinado."
+                : "Emoção não entra na conta — comportamento entra: o modelo simula o CUSTO da indisciplina."}
             </p>
           )}
         </>

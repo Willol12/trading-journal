@@ -8,8 +8,10 @@ import {
   riskOfRuin,
   contractsForRisk,
   expectedTradesToTarget,
+  PSYCHE_PROFILES,
   type SimMesaRules,
   type ParametricModel,
+  type PsycheModel,
   type FixedModel,
   type SimResult,
 } from '../simulator'
@@ -293,6 +295,98 @@ describe('fórmulas analíticas', () => {
     expect(r.trades).toBe(25)
     expect(r.dias).toBe(25)
     expect(expectedTradesToTarget(1250, 0.2, 50, 150)).toBeNull() // EV ≤ 0
+  })
+})
+
+describe('fator psicológico (tilt)', () => {
+  // Tilt "puro" pra testes determinísticos: só dobra a mão após 3 perdas.
+  function psy(over: Partial<PsycheModel> = {}): PsycheModel {
+    return {
+      tiltAfterLosses: 3,
+      tilt: { winRateDelta: 0, sizeMult: 2, extraTrades: 0, ruleBreakProb: 0, ruleBreakMult: 2 },
+      euphoriaAfterWins: null,
+      euphoria: null,
+      recoveryWins: 2,
+      breaker: null,
+      ...over,
+    }
+  }
+
+  it('tilt dobra a mão: WR=0 elimina em 12 trades (3×$50 + 9×$100)', () => {
+    const r = simulate(lucid25k(), par({ winRate: 0, psyche: psy() }), FAST)
+    expect(r.bustProb).toBe(1)
+    const bust = r.samplePaths.find((s) => s.outcome === 'bust')!
+    expect(bust.path).toHaveLength(13) // dia 0 + 12 dias
+    expect(r.tiltStats).not.toBeNull()
+    expect(r.tiltStats!.runsComTilt).toBe(1)
+    expect(r.tiltStats!.plTiltMedio).toBe(-900) // 9 trades em tilt × −$100
+  })
+
+  it('revenge: trades extras no tilt aceleram o fim (20 perdas em 8 dias)', () => {
+    const r = simulate(
+      lucid25k(),
+      par({
+        winRate: 0,
+        psyche: psy({
+          tilt: { winRateDelta: 0, sizeMult: 1, extraTrades: 2, ruleBreakProb: 0, ruleBreakMult: 2 },
+        }),
+      }),
+      FAST,
+    )
+    expect(r.bustProb).toBe(1)
+    // dias 1-2: 1 perda/dia; dia 3 entra em tilt no 1º trade → 3 trades/dia
+    const bust = r.samplePaths.find((s) => s.outcome === 'bust')!
+    expect(bust.path).toHaveLength(9) // elimina no dia 8
+  })
+
+  it('quebra de regra: perda vira 2x com prob 1 (bust em 11 trades)', () => {
+    const r = simulate(
+      lucid25k(),
+      par({
+        winRate: 0,
+        psyche: psy({
+          tiltAfterLosses: 1,
+          tilt: { winRateDelta: 0, sizeMult: 1, extraTrades: 0, ruleBreakProb: 1, ruleBreakMult: 2 },
+        }),
+      }),
+      FAST,
+    )
+    expect(r.bustProb).toBe(1)
+    const bust = r.samplePaths.find((s) => s.outcome === 'bust')!
+    expect(bust.path).toHaveLength(12) // −50, depois 10 × −100
+    expect(r.tiltStats!.plTiltMedio).toBe(-1000)
+  })
+
+  it('com tilt a aprovação cai vs disciplinado (mesma config e seed)', () => {
+    const slow = { nRuns: 3000, maxDays: 120, seed: 9 }
+    const m = { winRate: 0.45, riskUsd: 50, targetUsd: 100 }
+    const sem = simulate(lucid25k(), par(m), slow)
+    const com = simulate(lucid25k(), par({ ...m, psyche: PSYCHE_PROFILES.instavel }), slow)
+    expect(com.passProb).toBeLessThan(sem.passProb)
+    // com 45% de acerto, 2 perdas seguidas é quase inevitável num run
+    expect(com.tiltStats!.runsComTilt).toBeGreaterThan(0.9)
+    expect(com.tiltStats!.plTiltMedio).toBeLessThan(0)
+  })
+
+  it('disjuntor (parar o dia após 2 perdas) reduz o estrago do tilt', () => {
+    const slow = { nRuns: 3000, maxDays: 120, seed: 10 }
+    const m = { winRate: 0.45, riskUsd: 50, targetUsd: 100 }
+    const semBreaker = simulate(
+      lucid25k(),
+      par({ ...m, psyche: PSYCHE_PROFILES.instavel }),
+      slow,
+    )
+    const comBreaker = simulate(
+      lucid25k(),
+      par({ ...m, psyche: { ...PSYCHE_PROFILES.instavel, breaker: { maxLossesDia: 2 } } }),
+      slow,
+    )
+    expect(comBreaker.passProb).toBeGreaterThanOrEqual(semBreaker.passProb)
+    expect(comBreaker.bustProb).toBeLessThanOrEqual(semBreaker.bustProb)
+  })
+
+  it('tiltStats é null com o fator psicológico desligado', () => {
+    expect(simulate(lucid25k(), par(), FAST).tiltStats).toBeNull()
   })
 })
 

@@ -287,7 +287,99 @@ export function Guia() {
         </p>
       </Section>
 
-      <Section title="7 · Limites do simulador (leia uma vez)">
+      <Section title="7 · O fator psicológico — tilt em números">
+        <p>
+          Emoção não entra na conta — <strong className="text-fg">comportamento
+          entra</strong>. Não existe equação do medo, mas a única porta pela
+          qual o psicológico toca o saldo é o que ele te faz FAZER: aumentar a
+          mão depois de perder, entrar em setup ruim por vingança, segurar a
+          perda além do stop, operar 3× no dia que era pra ser 1. Isso é
+          mensurável — e a ciência já mediu: perda dói ~2,25× mais que o ganho
+          equivalente (prospect theory, Kahneman &amp; Tversky), e traders
+          profissionais comprovadamente aumentam o risco à tarde depois de uma
+          manhã perdedora (Coval &amp; Shumway, 2005). O &quot;tilt&quot; do
+          poker é o mesmo fenômeno.
+        </p>
+        <p>
+          O <strong className="text-fg">Fator psicológico</strong> do Simulador
+          modela isso como uma máquina de estados:{" "}
+          <strong className="text-fg">Disciplinado → Tilt</strong> (após N
+          perdas seguidas) e opcionalmente <strong className="text-fg">
+          Euforia</strong> (após N wins — onde uma perda derruba pro tilt com
+          gatilho reduzido). Em tilt, o comportamento muda: entradas piores
+          (−5 a −15pp de acerto), mão maior (1,25× a 2×), trades de revenge além
+          do plano e chance de segurar a perda além do stop. Sai do tilt
+          acumulando wins — ou parando de operar (disjuntor).
+        </p>
+        <p>O impacto no SEU caso (1x3, Lucid 25k, 40% de acerto, 10.000 simulações):</p>
+        <T>
+          <thead>
+            <tr>
+              <th className={th}>Perfil</th>
+              <th className={th}>Aprovação</th>
+              <th className={th}>Com disjuntor (2 perdas → para o dia)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className={td}>Disciplinado (sem tilt)</td>
+              <td className={td}>98,7%</td>
+              <td className={tdMut}>—</td>
+            </tr>
+            <tr>
+              <td className={td}>Estável</td>
+              <td className={tdMut}>96,1%</td>
+              <td className={tdMut}>96,1%</td>
+            </tr>
+            <tr>
+              <td className={td}>Médio</td>
+              <td className={td}>68,8%</td>
+              <td className={td}>96,3%</td>
+            </tr>
+            <tr>
+              <td className={td}>Instável</td>
+              <td className={td}>13,0%</td>
+              <td className={td}>71,2%</td>
+            </tr>
+          </tbody>
+        </T>
+        <p>
+          Leia de novo: <strong className="text-fg">a mesma estratégia, o mesmo
+          win rate</strong> — e a aprovação vai de 98,7% a 13% só pelo
+          comportamento sob pressão. E um detalhe contraintuitivo: no perfil
+          médio o P&amp;L médio DENTRO do tilt até sai positivo às vezes — o
+          tilt não destrói pela expectância, destrói pela{" "}
+          <strong className="text-fg">variância contra um drawdown finito</strong>{" "}
+          (mão maior + trades extras = oscilação que toca o piso).
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            <strong className="text-fg">O disjuntor é o edge mais barato que
+            existe</strong>: &quot;2 perdas no dia = desligo a tela&quot;
+            recompra ~27 pontos de aprovação no perfil médio. Sua regra de 1
+            trade/dia já é um disjuntor — o modelo mostra quanto ela vale.
+          </li>
+          <li>
+            Cada gerenciamento cobra um músculo diferente: o 1x3 exige aguentar
+            secas longas (é pago em rajadas); o 1x1 com stop largo dá menos
+            stops, mas cada erro em tilt queima 2+ vidas. Não existe &quot;payoff
+            pra quem tem psicológico bom&quot; — existe par estratégia+pessoa.
+          </li>
+          <li>
+            O modo <em>bootstrap (meus trades reais)</em> já contém o seu
+            psicológico de graça: o P&amp;L registrado inclui os seus erros
+            reais. Mais um motivo pra registrar TUDO no diário.
+          </li>
+          <li>
+            Com o tempo, as tags de emoção/erro do diário (aba Tendências)
+            permitem calibrar o SEU perfil de verdade: win rate depois de perda
+            vs depois de win, frequência de &quot;moveu o stop&quot; após
+            sequência ruim. Aí o modelo deixa de ser genérico e vira espelho.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="8 · Limites do simulador (leia uma vez)">
         <ul className="list-disc space-y-1 pl-5">
           <li>
             O modelo assume trades independentes com win rate estável. Mercado

@@ -31,6 +31,74 @@ export const ATM_PRESETS: AtmPreset[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Modelo psicológico (tilt): emoção não entra na conta — comportamento entra.
+// Máquina de estados por run: normal → tilt (perdas seguidas) → recupera com
+// wins; opcionalmente normal → euforia (wins seguidos), onde uma perda derruba
+// pro tilt com gatilho reduzido. Cada estado altera o COMPORTAMENTO do trade:
+// acerto (entradas piores), tamanho da mão, trades extras (revenge) e quebra
+// de regra (segurar a perda além do stop). Embasamento: prospect theory
+// (perda dói ~2,25x o ganho) e evidência de risco maior pós-perda em traders
+// reais (Coval & Shumway 2005).
+// ---------------------------------------------------------------------------
+
+export interface PsycheTiltEffects {
+  /** Delta no win rate decisivo (ex.: -0.10 = entradas 10pp piores). */
+  winRateDelta: number;
+  /** Multiplicador do TAMANHO da posição (escala risco E alvo). */
+  sizeMult: number;
+  /** Trades extras por dia enquanto em tilt (revenge trading). */
+  extraTrades: number;
+  /** Prob. de quebrar regra numa perda (mover/segurar o stop). */
+  ruleBreakProb: number;
+  /** Multiplicador da perda quando a regra é quebrada. */
+  ruleBreakMult: number;
+}
+
+export interface PsycheModel {
+  /** Perdas seguidas que disparam o tilt. */
+  tiltAfterLosses: number;
+  tilt: PsycheTiltEffects;
+  /** Wins seguidos que disparam euforia (null = sem euforia). */
+  euphoriaAfterWins: number | null;
+  /** Na euforia: excesso de confiança (mão maior, entradas piores). */
+  euphoria: { winRateDelta: number; sizeMult: number } | null;
+  /** Wins seguidos para sair do tilt. */
+  recoveryWins: number;
+  /** Disjuntor: após N perdas no MESMO dia, para de operar e esfria
+   *  (encerra o dia e volta ao estado normal). */
+  breaker: { maxLossesDia: number } | null;
+}
+
+export type PsycheProfileKey = "estavel" | "medio" | "instavel";
+
+export const PSYCHE_PROFILES: Record<PsycheProfileKey, PsycheModel> = {
+  estavel: {
+    tiltAfterLosses: 4,
+    tilt: { winRateDelta: -0.05, sizeMult: 1.25, extraTrades: 0, ruleBreakProb: 0.05, ruleBreakMult: 2 },
+    euphoriaAfterWins: 5,
+    euphoria: { winRateDelta: -0.03, sizeMult: 1.2 },
+    recoveryWins: 1,
+    breaker: null,
+  },
+  medio: {
+    tiltAfterLosses: 3,
+    tilt: { winRateDelta: -0.1, sizeMult: 1.5, extraTrades: 1, ruleBreakProb: 0.1, ruleBreakMult: 2 },
+    euphoriaAfterWins: 4,
+    euphoria: { winRateDelta: -0.05, sizeMult: 1.3 },
+    recoveryWins: 2,
+    breaker: null,
+  },
+  instavel: {
+    tiltAfterLosses: 2,
+    tilt: { winRateDelta: -0.15, sizeMult: 2, extraTrades: 2, ruleBreakProb: 0.2, ruleBreakMult: 2.5 },
+    euphoriaAfterWins: 3,
+    euphoria: { winRateDelta: -0.08, sizeMult: 1.5 },
+    recoveryWins: 3,
+    breaker: null,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Tipos de entrada
 // ---------------------------------------------------------------------------
 
@@ -76,6 +144,8 @@ export interface ParametricModel {
     priorAlpha: number;
     priorBeta: number;
   } | null;
+  /** Fator psicológico (tilt) — ver PSYCHE_PROFILES. Opcional. */
+  psyche?: PsycheModel | null;
 }
 
 export interface BootstrapModel {
@@ -138,6 +208,9 @@ export interface SimResult {
   band: { day: number; p10: number; p50: number; p90: number }[];
   /** Trajetórias representativas (pass rápido/mediano/lento, bust, timeout). */
   samplePaths: { outcome: RunOutcome; path: number[] }[];
+  /** Estatísticas de tilt — null quando o fator psicológico está desligado.
+   *  plTiltMedio = P&L médio dos trades feitos EM tilt, por run que tiltou. */
+  tiltStats: { runsComTilt: number; plTiltMedio: number } | null;
   elapsedMs: number;
 }
 
@@ -150,7 +223,15 @@ interface TradeOutcome {
   kind: "win" | "loss" | "be";
 }
 
-type Sampler = () => TradeOutcome;
+/** Modificadores de comportamento do estado psicológico vigente. */
+interface SampleMods {
+  winRateDelta: number;
+  sizeMult: number;
+  ruleBreakProb: number;
+  ruleBreakMult: number;
+}
+
+type Sampler = (mods?: SampleMods) => TradeOutcome;
 
 function makeSampler(model: TradeModel, rng: Rng): Sampler {
   if (model.kind === "fixed") {
@@ -188,14 +269,20 @@ function makeSampler(model: TradeModel, rng: Rng): Sampler {
     p = sampleBeta(rng, u.priorAlpha + u.wins, u.priorBeta + u.losses);
   }
   const beRate = clamp01(model.beRate);
-  return () => {
+  return (mods) => {
     if (beRate > 0 && rng() < beRate) {
       return { pnl: -model.commissionUsd, kind: "be" };
     }
-    if (rng() < p) {
-      return { pnl: model.targetUsd - model.commissionUsd, kind: "win" };
+    const pEff = mods ? clamp01(p + mods.winRateDelta) : p;
+    const size = mods?.sizeMult ?? 1;
+    if (rng() < pEff) {
+      return { pnl: model.targetUsd * size - model.commissionUsd, kind: "win" };
     }
-    let pnl = -model.riskUsd - model.commissionUsd;
+    let loss = model.riskUsd * size;
+    if (mods && mods.ruleBreakProb > 0 && rng() < mods.ruleBreakProb) {
+      loss *= mods.ruleBreakMult; // segurou a perda além do stop
+    }
+    let pnl = -loss - model.commissionUsd;
     if (model.slippage && model.slippage.prob > 0 && rng() < model.slippage.prob) {
       pnl -= sampleExp(rng, model.slippage.meanTicks) * model.slippage.tickValueUsd;
     }
@@ -213,6 +300,8 @@ interface RunResult {
   finalEquity: number;
   maxLossStreak: number;
   path: number[] | null;
+  tilted: boolean;
+  plTilt: number;
 }
 
 function runOnce(
@@ -223,6 +312,7 @@ function runOnce(
   recordPath: boolean,
 ): RunResult {
   const sample = makeSampler(model, rng);
+  const psyche = model.kind === "parametric" ? (model.psyche ?? null) : null;
   const start = rules.saldoInicial;
   const maxDD = rules.maxDrawdown;
   const isStatic = rules.tipoDrawdown === "static";
@@ -235,6 +325,12 @@ function runOnce(
   let maiorDia = 0;
   let lossStreak = 0;
   let maxLossStreak = 0;
+  // estado psicológico (só usado com psyche ligado)
+  let psyState: "normal" | "tilt" | "euforia" = "normal";
+  let psyLossStreak = 0;
+  let psyWinStreak = 0;
+  let tilted = false;
+  let plTilt = 0;
 
   const path: number[] | null = recordPath ? [start] : null;
   let outcome: RunOutcome = "timeout";
@@ -247,9 +343,37 @@ function runOnce(
     }
     diasOperados++;
     let dayPL = 0;
+    let lossesHoje = 0;
 
-    for (let t = 0; t < params.tradesPerDay; t++) {
-      const { pnl, kind } = sample();
+    // while com teto dinâmico: em tilt entram trades extras (revenge)
+    let t = 0;
+    while (
+      t <
+      params.tradesPerDay +
+        (psyche && psyState === "tilt" ? psyche.tilt.extraTrades : 0)
+    ) {
+      t++;
+      const emTilt = psyche != null && psyState === "tilt";
+      const mods: SampleMods | undefined = !psyche
+        ? undefined
+        : psyState === "tilt"
+          ? {
+              winRateDelta: psyche.tilt.winRateDelta,
+              sizeMult: psyche.tilt.sizeMult,
+              ruleBreakProb: psyche.tilt.ruleBreakProb,
+              ruleBreakMult: psyche.tilt.ruleBreakMult,
+            }
+          : psyState === "euforia" && psyche.euphoria
+            ? {
+                winRateDelta: psyche.euphoria.winRateDelta,
+                sizeMult: psyche.euphoria.sizeMult,
+                ruleBreakProb: 0,
+                ruleBreakMult: 1,
+              }
+            : undefined;
+
+      const { pnl, kind } = sample(mods);
+      if (emTilt) plTilt += pnl;
       equity += pnl;
       dayPL += pnl;
 
@@ -258,6 +382,42 @@ function runOnce(
         if (lossStreak > maxLossStreak) maxLossStreak = lossStreak;
       } else if (kind === "win") {
         lossStreak = 0;
+      }
+
+      // transições do estado psicológico
+      if (psyche) {
+        if (kind === "loss") {
+          psyLossStreak++;
+          psyWinStreak = 0;
+          lossesHoje++;
+          if (psyState === "euforia") {
+            // a queda da euforia: o tilt dispara com metade do gatilho
+            psyState =
+              psyLossStreak >=
+              Math.max(1, Math.ceil(psyche.tiltAfterLosses / 2))
+                ? "tilt"
+                : "normal";
+          } else if (
+            psyState === "normal" &&
+            psyLossStreak >= psyche.tiltAfterLosses
+          ) {
+            psyState = "tilt";
+          }
+          if (psyState === "tilt") tilted = true;
+        } else if (kind === "win") {
+          psyWinStreak++;
+          psyLossStreak = 0;
+          if (psyState === "tilt") {
+            if (psyWinStreak >= psyche.recoveryWins) psyState = "normal";
+          } else if (
+            psyState === "normal" &&
+            psyche.euphoriaAfterWins != null &&
+            psyche.euphoria != null &&
+            psyWinStreak >= psyche.euphoriaAfterWins
+          ) {
+            psyState = "euforia";
+          }
+        }
       }
 
       // trailing/intraday: o pico (e o piso) andam a cada trade
@@ -284,6 +444,13 @@ function runOnce(
         }
         break; // encerra o dia, o run continua amanhã
       }
+
+      // disjuntor psicológico: N perdas no dia → para de operar e esfria
+      if (psyche?.breaker && lossesHoje >= psyche.breaker.maxLossesDia) {
+        psyState = "normal";
+        psyLossStreak = 0;
+        break;
+      }
     }
 
     // fim do dia: no regime EOD o pico só anda aqui
@@ -308,7 +475,7 @@ function runOnce(
     }
   }
 
-  return { outcome, days, finalEquity: equity, maxLossStreak, path };
+  return { outcome, days, finalEquity: equity, maxLossStreak, path, tilted, plTilt };
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +498,8 @@ export function simulate(
 
   let passCount = 0;
   let bustCount = 0;
+  let tiltedCount = 0;
+  let plTiltSum = 0;
   const passDays: number[] = [];
   const streaks: number[] = [];
   const finals: number[] = [];
@@ -344,6 +513,10 @@ export function simulate(
       passDays.push(r.days);
     } else if (r.outcome === "bust") {
       bustCount++;
+    }
+    if (r.tilted) {
+      tiltedCount++;
+      plTiltSum += r.plTilt;
     }
     streaks.push(r.maxLossStreak);
     finals.push(r.finalEquity);
@@ -380,6 +553,13 @@ export function simulate(
     finalEquityHist: histogram(finals, 30),
     band: buildBand(recorded, p.maxDays),
     samplePaths: pickSamplePaths(recorded),
+    tiltStats:
+      model.kind === "parametric" && model.psyche != null
+        ? {
+            runsComTilt: tiltedCount / p.nRuns,
+            plTiltMedio: tiltedCount > 0 ? plTiltSum / tiltedCount : 0,
+          }
+        : null,
     elapsedMs: now() - t0,
   };
 }
