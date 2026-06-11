@@ -49,7 +49,7 @@ export default async function AppLayout({
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col">
           <Suspense>
-            <Topbar accounts={topAccounts} />
+            <Topbar accounts={topAccounts} footer={footer} />
           </Suspense>
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </div>
