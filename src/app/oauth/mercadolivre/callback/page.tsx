@@ -42,7 +42,7 @@ export default async function MercadoLivreCallbackPage({
           {error
             ? errorDescription || "O Mercado Livre devolveu um erro. Volte ao aplicativo e tente novamente."
             : code
-              ? "Copie o codigo temporario e volte ao aplicativo local para concluir a integracao."
+              ? "Copie a URL completa desta pagina e volte ao aplicativo local para concluir a integracao."
               : "Este endereco HTTPS esta pronto para receber retornos da integracao. Nenhuma senha ou informacao de pagamento e solicitada aqui."}
         </p>
         {code && <MercadoLivreCallbackCode code={code} />}

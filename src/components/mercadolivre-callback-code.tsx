@@ -5,15 +5,15 @@ import { useState } from "react";
 export function MercadoLivreCallbackCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
-  async function copyCode() {
-    await navigator.clipboard.writeText(code);
+  async function copyCallbackUrl() {
+    await navigator.clipboard.writeText(window.location.href);
     setCopied(true);
   }
 
   return (
     <div className="mt-5 rounded-xl border border-border bg-bg/60 p-4">
       <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-        Codigo temporario
+        Retorno temporario recebido
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -25,14 +25,14 @@ export function MercadoLivreCallbackCode({ code }: { code: string }) {
         />
         <button
           type="button"
-          onClick={copyCode}
+          onClick={copyCallbackUrl}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
         >
-          {copied ? "Copiado" : "Copiar codigo"}
+          {copied ? "URL copiada" : "Copiar URL completa"}
         </button>
       </div>
       <p className="mt-2 text-xs text-muted">
-        Esta pagina nao armazena o codigo. Ele expira e so pode ser utilizado no fluxo que o gerou.
+        Esta pagina nao armazena o codigo. A URL inclui o parametro de seguranca state e so pode ser utilizada no fluxo que a gerou.
       </p>
     </div>
   );
