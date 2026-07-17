@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,6 +39,31 @@ export async function signup(formData: FormData) {
 
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+export async function magicLink(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) backToLogin("Preencha seu email para receber o link de acesso.");
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
+  if (!host) backToLogin("Nao foi possivel identificar o endereco do aplicativo.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${protocol}://${host}/auth/confirm?next=/`,
+    },
+  });
+  if (error) backToLogin(error.message);
+
+  redirect(
+    "/login?message=" +
+      encodeURIComponent("Link enviado. Abra seu email e toque em Entrar."),
+  );
 }
 
 export async function signout() {

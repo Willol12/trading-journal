@@ -34,3 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Integracao Mercado Livre
+
+O callback publico fica em:
+
+`https://SEU-DOMINIO/oauth/mercadolivre/callback`
+
+O diario continua protegido pelo Supabase. Somente o callback e publico. A
+pagina autenticada `/mercadolivre` mostra a URI correta e apenas informa se as
+credenciais foram configuradas, sem revelar valores.
+
+Variaveis reservadas para a integracao na Vercel:
+
+- `MERCADOLIVRE_CLIENT_ID`
+- `MERCADOLIVRE_CLIENT_SECRET`
+
+Nunca prefixe o segredo com `NEXT_PUBLIC_`. O coletor de precos permanece local
+ou em infraestrutura apropriada; a Vercel hospeda a interface e o retorno OAuth.

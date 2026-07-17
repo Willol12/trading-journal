@@ -10,6 +10,7 @@ import {
   BookOpen,
   Building2,
   Settings,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const NAV: NavItem[] = [
   { href: "/diario", label: "Diário", icon: BookOpen },
   { href: "/contas", label: "Contas / Mesas", icon: Building2 },
   { href: "/config", label: "Configurações", icon: Settings },
+  { href: "/mercadolivre", label: "Mercado Livre", icon: ShoppingCart },
 ];
 
 /** Título da página atual a partir do pathname (usado na topbar). */

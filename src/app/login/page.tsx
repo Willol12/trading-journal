@@ -1,4 +1,4 @@
-import { login, signup } from "./actions";
+import { login, magicLink, signup } from "./actions";
 import { Reveal } from "@/components/ui/reveal";
 import { EquityCurveDeco } from "@/components/equity-curve-deco";
 
@@ -117,6 +117,13 @@ export default async function LoginPage({
                 className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-border bg-surface-2/60 text-sm font-medium text-fg transition duration-200 hover:bg-surface-2 active:scale-[0.99] xl:text-base"
               >
                 Criar conta
+              </button>
+              <button
+                formAction={magicLink}
+                formNoValidate
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-accent/30 bg-accent/10 text-sm font-medium text-accent transition duration-200 hover:bg-accent/15 active:scale-[0.99] xl:text-base"
+              >
+                Enviar link de acesso por email
               </button>
             </form>
           </div>
